@@ -1,6 +1,6 @@
 #[actix_rt::test]
 async fn health_check_works() {
-    spawn_app().await.expect("Failed to spawn our app.");
+    spawn_app();
     let client = reqwest::Client::new();
     let response = client
         .get("http://127.0.0.1:8000/health_check")
@@ -13,6 +13,7 @@ async fn health_check_works() {
 
 // our integration test
 // basically going to run this test like it was a real user:
-async fn spawn_app() -> std::io::Result<()> {
-    whale_watcher_server::run().await
+fn spawn_app() {
+    let server = whale_watcher_server::run().expect("Failed to bind address");
+    let _ = tokio::spawn(server);
 }
