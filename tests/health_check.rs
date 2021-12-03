@@ -6,7 +6,7 @@ fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     let port = listener.local_addr().unwrap().port();
-    let server = whale_watcher_server::run(listener).expect("Failed to bind address");
+    let server = whale_watcher_server::startup::run(listener).expect("Failed to bind address");
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
 }
@@ -26,13 +26,13 @@ async fn health_check_works() {
 }
 
 #[actix_rt::test]
-async fn add_whale_returns_a_200_for_valid_form_data() {
+async fn holder_returns_a_200_for_valid_form_data() {
     let app_address = spawn_app();
     let client = reqwest::Client::new();
-    let body = "token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
+    let body = "token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392&timestamp=2000";
 
     let response = client
-        .post(&format!("{}/add_whale", &app_address))
+        .post(&format!("{}/holders", &app_address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -43,7 +43,7 @@ async fn add_whale_returns_a_200_for_valid_form_data() {
 }
 
 #[actix_rt::test]
-async fn add_whale_returns_a_400_when_data_is_missing() {
+async fn holder_returns_a_400_when_data_is_missing() {
     let app_address = spawn_app();
     let client = reqwest::Client::new();
     let test_cases = vec![
@@ -52,12 +52,13 @@ async fn add_whale_returns_a_400_when_data_is_missing() {
         ("holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e", "missing holder address"),
         ("place=2", "missing place"),
         ("amount=27939322392%2E330572392", "missing amount"),
+        ("timestamp=2000", "missing amount"),
         ("", "missing both name and email"),
     ];
 
     for (invalid_body, error_message) in test_cases {
         let response = client
-            .post(&format!("{}/add_whale", &app_address))
+            .post(&format!("{}/holders", &app_address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()

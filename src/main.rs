@@ -1,5 +1,5 @@
 use std::net::TcpListener;
-use whale_watcher_server::run;
+use whale_watcher_server::startup::run;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
