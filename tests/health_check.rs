@@ -1,19 +1,26 @@
+use std::net::TcpListener;
+
 #[actix_rt::test]
 async fn health_check_works() {
-    spawn_app();
+    let address = spawn_app();
     let client = reqwest::Client::new();
     let response = client
-        .get("http://127.0.0.1:8000/health_check")
-        .send()
+        .get(&format!("{}/health_check", &address)).send()
         .await
         .expect("Failed to execute request.");
+
     assert!(response.status().is_success());
     assert_eq!(Some(0), response.content_length());
 }
 
 // our integration test
 // basically going to run this test like it was a real user:
-fn spawn_app() {
-    let server = whale_watcher_server::run().expect("Failed to bind address");
+fn spawn_app() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .expect("Failed to bind random port");
+
+    let port = listener.local_addr().unwrap().port();
+    let server = whale_watcher_server::run(listener).expect("Failed to bind address");
     let _ = tokio::spawn(server);
+    format!("http://127.0.0.1:{}", port)
 }
