@@ -7,7 +7,7 @@ pub struct HolderData {
     holder_address: String,
     place: u16,
     amount: f64,
-    timestamp: u64
+    timestamp: u64,
 }
 
 pub async fn add_holder(_form: web::Form<HolderData>) -> HttpResponse {

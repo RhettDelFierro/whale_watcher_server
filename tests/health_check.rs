@@ -1,3 +1,5 @@
+use sqlx::{PgConnection, Connection};
+use whale_watcher_server::configuration::get_configuration;
 use std::net::TcpListener;
 
 // our integration test
@@ -28,6 +30,11 @@ async fn health_check_works() {
 #[actix_rt::test]
 async fn holder_returns_a_200_for_valid_form_data() {
     let app_address = spawn_app();
+    let configuration = get_configuration().expect("Failted to read configuration.");
+    let connection_string = configuration.database.connection_string();
+    let connection = PgConnection::connect(&connection_string)
+        .await
+        .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
     let body = "token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392&timestamp=2000";
 
@@ -48,8 +55,14 @@ async fn holder_returns_a_400_when_data_is_missing() {
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("token_name=kitty", "token_name"),
-        ("contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2", "missing contract_address"),
-        ("holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e", "missing holder address"),
+        (
+            "contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2",
+            "missing contract_address",
+        ),
+        (
+            "holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e",
+            "missing holder address",
+        ),
         ("place=2", "missing place"),
         ("amount=27939322392%2E330572392", "missing amount"),
         ("timestamp=2000", "missing amount"),
