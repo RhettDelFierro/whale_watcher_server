@@ -1,6 +1,6 @@
-use sqlx::{PgConnection, Connection};
-use whale_watcher_server::configuration::get_configuration;
+use sqlx::{Connection, PgConnection};
 use std::net::TcpListener;
+use whale_watcher_server::configuration::get_configuration;
 
 // our integration test
 // basically going to run this test like it was a real user:
@@ -53,7 +53,10 @@ async fn holder_returns_a_200_for_valid_form_data() {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(saved.holder_address, "0x53084957562b692ea99beec870c12e7b8fb2d28e")
+    assert_eq!(
+        saved.holder_address,
+        "0x53084957562b692ea99beec870c12e7b8fb2d28e"
+    )
 }
 
 #[actix_rt::test]
