@@ -14,7 +14,7 @@ pub struct HolderData {
 }
 
 pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
-    sqlx::query!(
+    match sqlx::query!(
         r#"
         INSERT INTO holders (id, holder_address) VALUES ($1, $2)
         "#,
@@ -22,6 +22,12 @@ pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -
         _form.holder_address,
     )
         .execute(pool.get_ref())
-        .await;
-    HttpResponse::Ok().finish()
+        .await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            println!("Failed to execute query: {}", e);
+            HttpResponse:: InternalServerError().finish()
+        }
+    }
+
 }
