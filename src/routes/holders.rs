@@ -40,7 +40,8 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
     .await
     {
         Ok(_) => {
-            let address_query_span = tracing::info_span!("Saving new address details in the database");
+            let address_query_span =
+                tracing::info_span!("Saving new address details in the database");
             match sqlx::query!(
                 r#"
                 INSERT INTO addresses (network_id, address)
