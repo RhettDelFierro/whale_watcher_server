@@ -17,9 +17,15 @@ pub struct HolderData {
 pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
-        WITH par_key AS (INSERT INTO networks (network_name) VALUES ($1) RETURNING network_id)
+        WITH par_key AS (
+            INSERT INTO networks (network_name) VALUES ($1)
+            RETURNING network_id
+        )
         INSERT INTO addresses (network_id, address)
-        VALUES ((select par_key.network_id from par_key), $2)
+        VALUES (
+            (select par_key.network_id from par_key),
+            $2
+        )
         "#,
         _form.network,
         _form.contract_address
