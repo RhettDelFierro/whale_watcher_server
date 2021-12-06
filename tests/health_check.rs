@@ -64,7 +64,7 @@ async fn health_check_works() {
 async fn holder_returns_a_200_for_valid_form_data() {
     let test_app: TestApp = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = "token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392&timestamp=2000";
+    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392&timestamp=2000";
 
     let response = client
         .post(&format!("{}/holders", test_app.address))
@@ -76,14 +76,14 @@ async fn holder_returns_a_200_for_valid_form_data() {
 
     assert_eq!(200, response.status().as_u16());
 
-    let saved = sqlx::query!("SELECT holder_address FROM holders",)
+    let saved = sqlx::query!("SELECT address FROM addresses",)
         .fetch_one(&test_app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
     assert_eq!(
-        saved.holder_address,
-        "0x53084957562b692ea99beec870c12e7b8fb2d28e"
+        saved.address,
+        "0x044727e50ff30db57fad06ff4f5846eab5ea52a2"
     )
 }
 
@@ -104,7 +104,7 @@ async fn holder_returns_a_400_when_data_is_missing() {
         ("place=2", "missing place"),
         ("amount=27939322392%2E330572392", "missing amount"),
         ("timestamp=2000", "missing amount"),
-        ("", "missing both name and email"),
+        ("", "missing all required field"),
     ];
 
     for (invalid_body, error_message) in test_cases {
