@@ -6,7 +6,11 @@ use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let subscriber = get_subscriber("whale_watcher_server".into(), "info".into());
+    let subscriber = get_subscriber(
+        "whale_watcher_server".into(),
+        "info".into(),
+        std::io::stdout,
+    );
     init_subscriber(subscriber);
 
     let configuration = get_configuration().expect("Failed to read configuration.");

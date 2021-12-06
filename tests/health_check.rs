@@ -1,14 +1,21 @@
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
 use whale_watcher_server::configuration::{get_configuration, DatabaseSettings};
 use whale_watcher_server::startup::run;
 use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
-use once_cell::sync::Lazy;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
-    let subscriber = get_subscriber("test".into(), "debug".into());
-    init_subscriber(subscriber);
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        init_subscriber(subscriber);
+    };
 });
 
 pub struct TestApp {
@@ -19,7 +26,7 @@ pub struct TestApp {
 // our integration test
 // basically going to run this test like it was a real user:
 async fn spawn_app() -> TestApp {
-    Lazy:: force(&TRACING);
+    Lazy::force(&TRACING);
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
