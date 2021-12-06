@@ -15,6 +15,7 @@ pub struct HolderData {
 }
 
 pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
+    tracing::info!("Adding {} to networks.", _form.network);
     match sqlx::query!(
         r#"
         INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
@@ -25,6 +26,7 @@ pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -
     .await
     {
         Ok(_) => {
+            tracing::info!("Adding {} to address info.", _form.contract_address);
             match sqlx::query!(
                 r#"
                 INSERT INTO addresses (network_id, address)
@@ -39,15 +41,18 @@ pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -
             .execute(pool.get_ref())
             .await
             {
-                Ok(_) => HttpResponse::Ok().finish(),
+                Ok(_) => {
+                    tracing::info!("Address info has been saved.");
+                    HttpResponse::Ok().finish()
+                },
                 Err(e) => {
-                    println!("Failed to execute query: {}", e);
+                    tracing::error!("Failed to add address {} on network {}: {:?}", _form.contract_address, _form.network, e);
                     HttpResponse::InternalServerError().finish()
                 }
             }
         }
         Err(e) => {
-            println!("Failed to execute query: {}", e);
+            tracing::error!("Failed to add network {}: {:?}", _form.network, e);
             HttpResponse::InternalServerError().finish()
         }
     }
