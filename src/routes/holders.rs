@@ -17,42 +17,38 @@ pub struct HolderData {
 pub async fn add_holder(_form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
-        WITH par_key AS (
-            INSERT INTO networks (network_name) VALUES ($1)
-            RETURNING network_id
-        )
-        INSERT INTO addresses (network_id, address)
-        VALUES (
-            (select par_key.network_id from par_key),
-            $2
-        )
+        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
-        _form.network,
-        _form.contract_address
+        _form.network
     )
-        .execute(pool.get_ref())
-        .await
+    .execute(pool.get_ref())
+    .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => {
+            match sqlx::query!(
+                r#"
+                INSERT INTO addresses (network_id, address)
+                VALUES (
+                 (SELECT network_id FROM networks WHERE network_name = $1),
+                 $2
+                );
+                "#,
+                _form.network,
+                _form.contract_address
+            )
+            .execute(pool.get_ref())
+            .await
+            {
+                Ok(_) => HttpResponse::Ok().finish(),
+                Err(e) => {
+                    println!("Failed to execute query: {}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
+        }
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }
-
-    // match sqlx::query!(
-    //     r#"
-    //     INSERT INTO addresses (holder_address) VALUES ($1)
-    //     "#,
-    //     _form.holder_address,
-    // )
-    // .execute(pool.get_ref())
-    // .await
-    // {
-    //     Ok(_) => HttpResponse::Ok().finish(),
-    //     Err(e) => {
-    //         println!("Failed to execute query: {}", e);
-    //         HttpResponse::InternalServerError().finish()
-    //     }
-    // }
 }

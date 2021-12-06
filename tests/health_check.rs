@@ -81,10 +81,7 @@ async fn holder_returns_a_200_for_valid_form_data() {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(
-        saved.address,
-        "0x044727e50ff30db57fad06ff4f5846eab5ea52a2"
-    )
+    assert_eq!(saved.address, "0x044727e50ff30db57fad06ff4f5846eab5ea52a2")
 }
 
 #[actix_rt::test]
