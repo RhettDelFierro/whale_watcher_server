@@ -51,17 +51,18 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
     Ok(())
 }
 
-pub async fn insert_address(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
+pub async fn insert_address(pool: &PgPool, network: &String, address: &String) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
                 INSERT INTO addresses (network_id, address)
                 VALUES (
                  (SELECT network_id FROM networks WHERE network_name = $1),
                  $2
-                );
+                )
+                ON CONFLICT DO NOTHING;
                 "#,
-        form.network,
-        form.contract_address
+        network,
+        address
     )
     .execute(pool)
     .await
@@ -116,8 +117,8 @@ pub async fn insert_place_amount(pool: &PgPool, form: &HolderData) -> Result<(),
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     match insert_network(&pool, &form).await {
         Ok(_) => match insert_token_name(&pool, &form).await {
-            Ok(_) => match insert_address(&pool, &form).await {
-                Ok(_) => match insert_address(&pool, &form).await {
+            Ok(_) => match insert_address(&pool, &form.network, &form.contract_address).await {
+                Ok(_) => match insert_address(&pool, &form.network, &form.holder_address).await {
                     Ok(_) => match insert_place_amount(&pool, &form).await {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
