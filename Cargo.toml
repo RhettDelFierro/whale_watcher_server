@@ -21,6 +21,7 @@ tracing-futures = "0.2.5"
 tracing-subscriber = { version = "0.2.12", features = ["registry", "env-filter"] }
 tracing-bunyan-formatter = "0.2.2"
 tracing-log = "0.1.2"
+bigdecimal = { version = "0.2", features = ["serde"] }
 
 [dependencies.sqlx]
 version = "0.5.7"
@@ -31,9 +32,9 @@ features = [
     "postgres",
     "uuid",
     "chrono",
-    "migrate"
+    "migrate",
+    "bigdecimal",
 ]
-
 
 [dev-dependencies]
 actix-rt = "2"
