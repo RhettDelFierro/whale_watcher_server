@@ -33,30 +33,39 @@ CREATE TABLE scam_tokens
     notes      TEXT NOT NULL,
     scam_creator_network TEXT NOT NULL,
     scam_creator_address TEXT NOT NULL,
+    scam_type scam_types,
     FOREIGN KEY (scam_creator_network, scam_creator_address) REFERENCES addresses(network_id, address),
     FOREIGN KEY (network_id, address) REFERENCES addresses (network_id, address)
 );
 
-CREATE TABLE legit_whales
+CREATE TABLE legit_token_creators
 (
     network_id integer REFERENCES networks (network_id),
     address    TEXT NOT NULL,
     notes      TEXT NOT NULL,
+    network_of_major_token TEXT NOT NULL,
+    big_contract_address TEXT NOT NULL,
+    FOREIGN KEY (network_of_major_token, big_contract_address) REFERENCES addresses(network_id, address),
     FOREIGN KEY (network_id, address) REFERENCES addresses (network_id, address)
 );
 
-CREATE TABLE paper_hands
+CREATE TABLE scam_tokens
 (
     network_id integer REFERENCES networks (network_id),
     address    TEXT NOT NULL,
     notes      TEXT NOT NULL,
+    scam_creator_network TEXT NOT NULL,
+    scam_creator_address TEXT NOT NULL,
+    scam_type scam_types,
+    FOREIGN KEY (scam_creator_network, scam_creator_address) REFERENCES addresses(network_id, address),
     FOREIGN KEY (network_id, address) REFERENCES addresses (network_id, address)
 );
 
-CREATE TABLE dumpers
+CREATE TABLE holders
 (
     network_id integer REFERENCES networks (network_id),
     address    TEXT NOT NULL,
     notes      TEXT NOT NULL,
+    holder_type holder_types,
     FOREIGN KEY (network_id, address) REFERENCES addresses (network_id, address)
 );
