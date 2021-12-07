@@ -117,7 +117,7 @@ pub async fn insert_holder_totals(pool: &PgPool, form: &HolderData) -> Result<()
 #[tracing::instrument(
     name = "Adding a new holder.",
     skip(form, pool),
-        fields(
+    fields(
         network = %form.network,
         token_name = %form.token_name,
         contract_address = %form.contract_address,
