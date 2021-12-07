@@ -19,6 +19,10 @@ pub struct HolderData {
     // timestamp: i64, // TODO: will be from Utc::now().timestamp() from a time passed in by the front end.
 }
 
+#[tracing:: instrument(
+    name = "Saving new network in the database",
+    skip(form, pool)
+)]
 pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -35,6 +39,10 @@ pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx
     Ok(())
 }
 
+#[tracing:: instrument(
+    name = "Saving new token name in the database",
+    skip(form, pool)
+)]
 pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -73,7 +81,11 @@ pub async fn insert_address(pool: &PgPool, network: &String, address: &String) -
     Ok(())
 }
 
-pub async fn insert_place_amount(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
+#[tracing:: instrument(
+    name = "Saving new holder totals details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_holder_totals(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO holder_totals (network_id, address, token_name_id, place, amount, checked_on)
@@ -119,7 +131,7 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
         Ok(_) => match insert_token_name(&pool, &form).await {
             Ok(_) => match insert_address(&pool, &form.network, &form.contract_address).await {
                 Ok(_) => match insert_address(&pool, &form.network, &form.holder_address).await {
-                    Ok(_) => match insert_place_amount(&pool, &form).await {
+                    Ok(_) => match insert_holder_totals(&pool, &form).await {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
                     },
