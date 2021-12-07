@@ -35,6 +35,7 @@ features = [
     "chrono",
     "migrate",
     "bigdecimal",
+    "offline",
 ]
 
 [dev-dependencies]

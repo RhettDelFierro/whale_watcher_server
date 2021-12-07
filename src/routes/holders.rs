@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
 use sqlx::types::BigDecimal;
+use sqlx::PgPool;
 use tracing_futures::Instrument;
 use uuid::Uuid;
 
@@ -19,10 +19,7 @@ pub struct HolderData {
     // timestamp: i64, // TODO: will be from Utc::now().timestamp() from a time passed in by the front end.
 }
 
-#[tracing:: instrument(
-    name = "Saving new network in the database",
-    skip(form, pool)
-)]
+#[tracing::instrument(name = "Saving new network in the database", skip(form, pool))]
 pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -39,10 +36,7 @@ pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx
     Ok(())
 }
 
-#[tracing:: instrument(
-    name = "Saving new token name in the database",
-    skip(form, pool)
-)]
+#[tracing::instrument(name = "Saving new token name in the database", skip(form, pool))]
 pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -59,7 +53,11 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
     Ok(())
 }
 
-pub async fn insert_address(pool: &PgPool, network: &String, address: &String) -> Result<(), sqlx::Error> {
+pub async fn insert_address(
+    pool: &PgPool,
+    network: &String,
+    address: &String,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
                 INSERT INTO addresses (network_id, address)
@@ -81,7 +79,7 @@ pub async fn insert_address(pool: &PgPool, network: &String, address: &String) -
     Ok(())
 }
 
-#[tracing:: instrument(
+#[tracing::instrument(
     name = "Saving new holder totals details in the database",
     skip(form, pool)
 )]
