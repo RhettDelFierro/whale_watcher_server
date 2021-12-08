@@ -184,6 +184,7 @@ pub async fn get_holder(parameters: web::Query<Parameters>, pool: web::Data<PgPo
             ON a.address = h.holder_address AND a.network_id = h.network_id AND h.contract_address = $2
         INNER JOIN networks n
             ON n.network_id = h.network_id AND n.network_name = $1
+        ORDER BY h.checked_on ASC;
         ;
         "#,
         parameters.network,
