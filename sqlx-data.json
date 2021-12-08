@@ -1,3 +1,133 @@
 {
-  "db": "PostgreSQL"
+  "db": "PostgreSQL",
+  "52f7dcd8539cbcda21c79ff4461fc0ddbd2fcf42278beb7bca0fcc0508a5fe23": {
+    "query": "\n        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "63ea2f1a1c551de71e5c93d1024d907327657aefbf83656b5cac0e8ecd265987": {
+    "query": "\n        INSERT INTO token_names (token_name) VALUES ($1) ON CONFLICT DO NOTHING;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "76b47ee0a93af7a8fea7e1cd7cf31ca9825897b475ea712c5fa9d5a24d32bdf2": {
+    "query": "\n        SELECT h.*, t.token_name, n.network_name FROM holder_totals h\n        INNER JOIN token_names t\n            ON h.token_name_id = t.token_name_id\n        INNER JOIN addresses a\n            ON a.address = h.holder_address AND a.network_id = h.network_id AND h.contract_address = $2\n        INNER JOIN networks n\n            ON n.network_id = h.network_id AND n.network_name = $1\n        ORDER BY h.checked_on ASC;\n        ;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "transaction_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "network_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "holder_address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "token_name_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "place",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "amount",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 6,
+          "name": "checked_on",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 7,
+          "name": "contract_address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "token_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "network_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "c55342d4abbde9ad6babc3da0fbf79e3fa6bacbe4fd196b13e970c9bd99c4716": {
+    "query": "\n                INSERT INTO addresses (network_id, address)\n                VALUES (\n                 (SELECT network_id FROM networks WHERE network_name = $1),\n                 $2\n                )\n                ON CONFLICT DO NOTHING;\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "d2529dd2fd8d72f2b8ee27fa735da5c9a97d6cffad7f06ac11f6a4cdbd47aea0": {
+    "query": "\n        INSERT INTO holder_totals (network_id, holder_address, token_name_id, place, amount, checked_on, contract_address)\n        VALUES (\n            (SELECT network_id FROM networks WHERE network_name = $1),\n            $2,\n            (SELECT token_name_id FROM token_names WHERE token_name = $3),\n            $4,\n            $5,\n            $6,\n            $7\n        );\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Int4",
+          "Numeric",
+          "Timestamptz",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  }
 }
