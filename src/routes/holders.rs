@@ -200,7 +200,7 @@ pub async fn get_holder(
                 let holder = HolderData {
                     network: row.network_name,
                     token_name: row.token_name,
-                    contract_address: row.contract_address.unwrap(),
+                    contract_address: row.contract_address,
                     holder_address: row.holder_address,
                     place: row.place,
                     amount: row.amount,
