@@ -27,12 +27,12 @@ pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx
         "#,
         form.network
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -44,12 +44,12 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
         "#,
         form.token_name
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -70,18 +70,18 @@ pub async fn insert_address(
         network,
         address
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
 #[tracing::instrument(
-name = "Saving new holder totals details in the database",
-skip(form, pool)
+    name = "Saving new holder totals details in the database",
+    skip(form, pool)
 )]
 pub async fn insert_holder_totals(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
     sqlx::query!(
@@ -153,7 +153,7 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HoldersResponse {
-    data: Vec<HolderData>
+    data: Vec<HolderData>,
 }
 
 // #[derive(serde::Deserialize, serde::Serialize)]
@@ -174,7 +174,10 @@ network = % parameters.network,
 contract_address = % parameters.contract_address
 )
 )]
-pub async fn get_holder(parameters: web::Query<Parameters>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn get_holder(
+    parameters: web::Query<Parameters>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
     match sqlx::query!(
         r#"
         SELECT h.*, t.token_name, n.network_name FROM holder_totals h
@@ -198,10 +201,8 @@ pub async fn get_holder(parameters: web::Query<Parameters>, pool: web::Data<PgPo
                     network: row.network_name,
                     token_name: row.token_name,
                     contract_address: row.contract_address.unwrap(),
-                    // TODO: will still need to make a separate table
                     holder_address: row.holder_address,
                     place: row.place,
-                    // TODO: will still need to make a separate table
                     amount: row.amount,
                 };
                 holders.push(holder);
