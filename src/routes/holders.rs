@@ -175,7 +175,7 @@ contract_address = % parameters.contract_address
 )
 )]
 pub async fn get_holder(parameters: web::Query<Parameters>, pool: web::Data<PgPool>) -> HttpResponse {
-    let rows = sqlx::query!(
+    match sqlx::query!(
         r#"
         SELECT h.*, t.token_name, n.network_name FROM holder_totals h
         INNER JOIN token_names t
@@ -190,25 +190,29 @@ pub async fn get_holder(parameters: web::Query<Parameters>, pool: web::Data<PgPo
         parameters.network,
         parameters.contract_address,
     ).fetch_all(pool.get_ref())
-        .await
-        .expect("Failed to fetch holders.");
-    println!("{:?}", rows);
-    let mut holders: Vec<HolderData> = vec![];
-    for row in rows {
-        let holder = HolderData {
-            network: row.network_name,
-            token_name: row.token_name,
-            contract_address: row.contract_address.unwrap(),
-            // TODO: will still need to make a separate table
-            holder_address: row.holder_address,
-            place: row.place,
-            // TODO: will still need to make a separate table
-            amount: row.amount,
-        };
-        holders.push(holder);
-    };
-    let response = HoldersResponse {
-        data: holders
-    };
-    HttpResponse::Ok().json(response)
+        .await {
+        Ok(rows) => {
+            let mut holders: Vec<HolderData> = vec![];
+            for row in rows {
+                let holder = HolderData {
+                    network: row.network_name,
+                    token_name: row.token_name,
+                    contract_address: row.contract_address.unwrap(),
+                    // TODO: will still need to make a separate table
+                    holder_address: row.holder_address,
+                    place: row.place,
+                    // TODO: will still need to make a separate table
+                    amount: row.amount,
+                };
+                holders.push(holder);
+            };
+            let response = HoldersResponse {
+                data: holders
+            };
+            HttpResponse::Ok().json(response)
+        },
+        Err(e) => {
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
