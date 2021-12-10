@@ -82,7 +82,7 @@ async fn health_check_works() {
 async fn holder_returns_a_200_for_validform_data() {
     let test_app: TestApp = spawn_app().await;
     let client = reqwest::Client::new();
-    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392&timestamp=2000";
+    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
 
     let response = client
         .post(&format!("{}/holders", test_app.address))
