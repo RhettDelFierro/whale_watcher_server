@@ -16,43 +16,43 @@ pub enum Network {
 }
 
 // can probably have this return an enum for network.
-fn derive_network(s: &str) -> Option<Network> {
+fn derive_network(s: &str) -> Result<Network, String> {
     let str = s.to_lowercase();
     if str == "ethereum" || str == "eth" {
-        return Some(Network::ETH);
+        return Ok(Network::ETH);
     } else if str == "binancesmartchain" || str == "binance" || str == "bsc" {
-        return Some(Network::BSC);
+        return Ok(Network::BSC);
     } else if str == "cardano" || str == "ada" {
-        return Some(Network::ADA);
+        return Ok(Network::ADA);
     } else if str == "avalanche" || str == "avax" {
-        return Some(Network::AVAX);
+        return Ok(Network::AVAX);
     } else if str == "polygon" || str == "matic" {
-        return Some(Network::MATIC);
+        return Ok(Network::MATIC);
     } else if str == "fantom" || str == "ftm" {
-        return Some(Network::FTM);
+        return Ok(Network::FTM);
     } else if str == "solana" || str == "sol" {
-        return Some(Network::SOL);
+        return Ok(Network::SOL);
     } else if str == "terra" || str == "terraluna" || str == "luna" {
-        return Some(Network::LUNA);
+        return Ok(Network::LUNA);
     } else if str == "polkadot" || str == "dot" {
-        return Some(Network::DOT);
+        return Ok(Network::DOT);
     } else if str == "moonriver" || str == "movr" {
-        return Some(Network::MOVR);
+        return Ok(Network::MOVR);
     }
-    None
+    Err(String::from("network not supported"))
 }
 
 impl Network {
-    pub fn parse(s: String) -> Network {
+    pub fn parse(s: String) -> Result<Network, String>{
         let is_empty_or_whitespace = s.trim().is_empty();
         let is_too_long = s.graphemes(true).count() > 256;
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
         let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
         let network = derive_network(&s);
-        if is_empty_or_whitespace || is_too_long || contains_forbidden_characters || network.is_none() {
+        if is_empty_or_whitespace || is_too_long || contains_forbidden_characters || network.is_err() {
             panic!("{}", format!("{} is not a valid network name.", s))
         } else {
-            network.unwrap()
+            network
         }
     }
 }
@@ -77,7 +77,7 @@ impl AsRef<str> for Network {
 pub struct Address(String);
 
 impl Address {
-    pub fn parse(s: String) -> Address {
+    pub fn parse(s: String) -> Result<Address, String> {
         let is_empty_or_whitespace = s.trim().is_empty();
         let is_too_long = s.graphemes(true).count() > 256;
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
@@ -85,7 +85,7 @@ impl Address {
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
             panic!("{}", format!("{} is not a valid address.", &s))
         } else {
-            Self(s)
+            Ok(Self(s))
         }
     }
 }

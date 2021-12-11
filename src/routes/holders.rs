@@ -136,12 +136,12 @@ amount = % form.amount,
 )]
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     let contract_address_info = AddressInfo {
-        network: Network::parse(form.0.network.clone()),
-        address: Address::parse(String::from(&form.0.contract_address[..])),
+        network: Network::parse(form.0.network.clone()).expect("Network name is invalid."),
+        address: Address::parse(String::from(&form.0.contract_address[..])).expect("contract_address format is invalid"),
     };
     let holder_address_info = AddressInfo {
-        network: Network::parse(form.0.network.clone()),
-        address: Address::parse(String::from(&form.0.holder_address[..])),
+        network: Network::parse(form.0.network.clone()).expect("Network name is invalid."),
+        address: Address::parse(String::from(&form.0.holder_address[..])).expect("holder_address format is invalid"),
     };
     match insert_network(&pool, &holder_address_info).await {
         Ok(_) => match insert_token_name(&pool, &form).await {
