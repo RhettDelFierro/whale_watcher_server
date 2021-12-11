@@ -24,12 +24,12 @@ pub async fn insert_network(pool: &PgPool, address_info: &AddressInfo) -> Result
         "#,
         address_info.network.as_ref()
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
@@ -41,19 +41,19 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
         "#,
         form.token_name
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
 #[tracing::instrument(name = "Saving new address in the database", skip(address_info, pool))]
 pub async fn insert_address(
     pool: &PgPool,
-    address_info: &AddressInfo
+    address_info: &AddressInfo,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -67,20 +67,25 @@ pub async fn insert_address(
         address_info.network.as_ref(),
         address_info.address.as_ref()
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
 #[tracing::instrument(
-    name = "Saving new holder totals details in the database",
-    skip(form, pool)
+name = "Saving new holder totals details in the database",
+skip(form, pool, holder_address_info, contract_address_info)
 )]
-pub async fn insert_holder_totals(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
+pub async fn insert_holder_totals(
+    pool: &PgPool,
+    holder_address_info: &AddressInfo,
+    contract_address_info: &AddressInfo,
+    form: &HolderData,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO holder_totals (network_id, holder_address, token_name_id, place, amount, checked_on, contract_address)
@@ -94,13 +99,13 @@ pub async fn insert_holder_totals(pool: &PgPool, form: &HolderData) -> Result<()
             $7
         );
         "#,
-        form.network,
-        form.holder_address,
+        holder_address_info.network.as_ref(),
+        holder_address_info.address.as_ref(),
         form.token_name,
         form.place,
         form.amount,
         Utc::now(),
-        form.contract_address,
+        contract_address_info.address.as_ref(),
     )
         .execute(pool)
         .await
@@ -132,17 +137,17 @@ amount = % form.amount,
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     let contract_address_info = AddressInfo {
         network: Network::parse(form.0.network.clone()),
-        address: Address::parse(String::from(&form.0.contract_address[..]))
+        address: Address::parse(String::from(&form.0.contract_address[..])),
     };
     let holder_address_info = AddressInfo {
         network: Network::parse(form.0.network.clone()),
-        address: Address::parse(String::from(&form.0.holder_address[..]))
+        address: Address::parse(String::from(&form.0.holder_address[..])),
     };
     match insert_network(&pool, &holder_address_info).await {
         Ok(_) => match insert_token_name(&pool, &form).await {
             Ok(_) => match insert_address(&pool, &contract_address_info).await {
                 Ok(_) => match insert_address(&pool, &holder_address_info).await {
-                    Ok(_) => match insert_holder_totals(&pool, &form).await {
+                    Ok(_) => match insert_holder_totals(&pool, &holder_address_info, &contract_address_info, &form).await {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
                     },
@@ -206,7 +211,7 @@ pub async fn get_holder(
                 data: holders
             };
             HttpResponse::Ok().json(response)
-        },
+        }
         Err(e) => {
             HttpResponse::InternalServerError().finish()
         }
