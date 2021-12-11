@@ -4,28 +4,25 @@ use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use tracing_futures::Instrument;
 use uuid::Uuid;
+use crate::domain::{Address, Network, AddressInfo};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HolderData {
     network: String,
     token_name: String,
     contract_address: String,
-    // TODO: will still need to make a separate table
     holder_address: String,
     place: i32,
-    // TODO: will still need to make a separate table
     amount: BigDecimal,
-    // TODO: will still need to make a separate table
-    // timestamp: i64, // TODO: will be from Utc::now().timestamp() from a time passed in by the front end.
 }
 
-#[tracing::instrument(name = "Saving new network in the database", skip(form, pool))]
-pub async fn insert_network(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
+#[tracing::instrument(name = "Saving new network in the database", skip(address_info, pool))]
+pub async fn insert_network(pool: &PgPool, address_info: &AddressInfo) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
-        form.network
+        address_info.network.as_ref()
     )
     .execute(pool)
     .await
@@ -53,10 +50,10 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
     Ok(())
 }
 
+#[tracing::instrument(name = "Saving new address in the database", skip(address_info, pool))]
 pub async fn insert_address(
     pool: &PgPool,
-    network: &String,
-    address: &String,
+    address_info: &AddressInfo
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -67,8 +64,8 @@ pub async fn insert_address(
                 )
                 ON CONFLICT DO NOTHING;
                 "#,
-        network,
-        address
+        address_info.network.as_ref(),
+        address_info.address.as_ref()
     )
     .execute(pool)
     .await
@@ -133,10 +130,18 @@ amount = % form.amount,
 )
 )]
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
-    match insert_network(&pool, &form).await {
+    let contract_address_info = AddressInfo {
+        network: Network::parse(form.0.network.clone()),
+        address: Address::parse(String::from(&form.0.contract_address[..]))
+    };
+    let holder_address_info = AddressInfo {
+        network: Network::parse(form.0.network.clone()),
+        address: Address::parse(String::from(&form.0.holder_address[..]))
+    };
+    match insert_network(&pool, &holder_address_info).await {
         Ok(_) => match insert_token_name(&pool, &form).await {
-            Ok(_) => match insert_address(&pool, &form.network, &form.contract_address).await {
-                Ok(_) => match insert_address(&pool, &form.network, &form.holder_address).await {
+            Ok(_) => match insert_address(&pool, &contract_address_info).await {
+                Ok(_) => match insert_address(&pool, &holder_address_info).await {
                     Ok(_) => match insert_holder_totals(&pool, &form).await {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -206,12 +211,4 @@ pub async fn get_holder(
             HttpResponse::InternalServerError().finish()
         }
     }
-}
-
-pub fn is_valid_name(s: &str) -> bool {
-    let is_empty_or_whitespace = s.trim().is_empty();
-    let is_too_long = s.graphemes(true).count() > 256;
-    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-    let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
-    !(is_empty_or_whitespace || is_too_long || contains_forbidden_characters)
 }
