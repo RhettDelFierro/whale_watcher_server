@@ -1,7 +1,7 @@
 use unicode_segmentation::UnicodeSegmentation;
 use sqlx::Type;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug)]
 pub enum Network {
     ETH,
     BSC,
@@ -43,7 +43,7 @@ fn derive_network(s: &str) -> Result<Network, String> {
 }
 
 impl Network {
-    pub fn parse(s: String) -> Result<Network, String>{
+    pub fn parse(s: String) -> Result<Network, String> {
         let is_empty_or_whitespace = s.trim().is_empty();
         let is_too_long = s.graphemes(true).count() > 256;
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
@@ -74,6 +74,7 @@ impl AsRef<str> for Network {
     }
 }
 
+#[derive(Debug)]
 pub struct Address(String);
 
 impl Address {
@@ -99,4 +100,63 @@ impl AsRef<str> for Address {
 pub struct AddressInfo {
     pub network: Network,
     pub address: Address,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::{Address, Network};
+    use claim::{assert_err, assert_ok};
+
+    #[test]
+    fn a_256_grapheme_long_name_is_valid() {
+        let address = "a".repeat(256);
+        assert_ok!(Address:: parse(address));
+    }
+
+    #[test]
+    fn a_name_longer_than_256_graphemes_is_rejected() {
+        let address = "a".repeat(257);
+        assert_err!(Address::parse(address));
+    }
+
+    #[test]
+    fn whitespace_only_names_are_rejected() {
+        let address = " ".to_string();
+        assert_err!(Address::parse(address));
+    }
+
+    #[test]
+    fn empty_string_is_rejected() {
+        let address = "".to_string();
+        assert_err!(Address::parse(address));
+    }
+
+    #[test]
+    fn names_containing_an_invalid_character_are_rejected() {
+        for name in &['/', '(', ')', '"', '<', '>', '\\', '{', '}'] {
+            let address = name.to_string();
+            assert_err!(Address::parse(address));
+        }
+    }
+
+    #[test]
+    fn a_valid_name_is_parsed_successfully() {
+        let address = "Ursula Le Guin".to_string();
+        assert_ok!(Address::parse(address));
+    }
+
+    #[test]
+    fn a_valid_network_is_parsed_successfully() {
+        let network = "ethereum".to_string();
+        assert_eq!(Network::parse(network).unwrap().as_ref(), "eth");
+        let network = "binance".to_string();
+        assert_eq!(Network::parse(network).unwrap().as_ref(), "bsc");
+    }
+
+    #[test]
+    fn an_unsupported_network_is_not_parsed() {
+        let network = "superchain".to_string();
+        assert_err!(Network::parse(network));
+    }
+
 }

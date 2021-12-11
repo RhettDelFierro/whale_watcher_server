@@ -163,7 +163,7 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HoldersResponse {
-    data: Vec<HolderData>,
+    pub data: Vec<HolderData>,
 }
 
 #[tracing::instrument(

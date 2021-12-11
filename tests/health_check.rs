@@ -90,7 +90,7 @@ async fn holder_returns_a_200_for_validform_data() {
         .body(body)
         .send()
         .await
-        .expect("Failed to execute request.");
+        .expect("Failed to execute post request to /holders.");
 
     assert_eq!(200, response.status().as_u16());
 
@@ -99,7 +99,7 @@ async fn holder_returns_a_200_for_validform_data() {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(saved.address, "0x044727e50ff30db57fad06ff4f5846eab5ea52a2")
+    assert_eq!(saved.address, "0x044727e50ff30db57fad06ff4f5846eab5ea52a2");
 }
 
 #[actix_rt::test]
