@@ -1,4 +1,4 @@
-use crate::domain::{Address, AddressInfo, Network};
+use crate::domain::{Address, AddressInfo, Network, TokenName};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -33,13 +33,13 @@ pub async fn insert_network(pool: &PgPool, address_info: &AddressInfo) -> Result
     Ok(())
 }
 
-#[tracing::instrument(name = "Saving new token name in the database", skip(form, pool))]
-pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), sqlx::Error> {
+#[tracing::instrument(name = "Saving new token name in the database", skip(token_name, pool))]
+pub async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO token_names (token_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
-        form.token_name
+        token_name.as_ref()
     )
     .execute(pool)
     .await
@@ -120,20 +120,24 @@ pub struct Parameters {
 }
 
 #[tracing::instrument(
-name = "Adding a new holder.",
-skip(form, pool),
-fields(
-network = % form.network,
-token_name = % form.token_name,
-contract_address = % form.contract_address,
-holder_address = % form.holder_address,
-place = % form.place,
-amount = % form.amount,
-)
+    name = "Adding a new holder.",
+    skip(form, pool),
+    fields(
+        network = % form.network,
+        token_name = % form.token_name,
+        contract_address = % form.contract_address,
+        holder_address = % form.holder_address,
+        place = % form.place,
+        amount = % form.amount,
+    )
 )]
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
     let network = match Network::parse(String::from(&form.0.network[..])) {
         Ok(network_name) => network_name,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+    let token_name = match TokenName::parse(String::from(&form.0.token_name[..])) {
+        Ok(token_name) => token_name,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
     let holder_address = match Address::parse(String::from(&form.0.holder_address[..])) {
@@ -152,8 +156,9 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
         network: network.clone(),
         address: holder_address,
     };
+
     match insert_network(&pool, &holder_address_info).await {
-        Ok(_) => match insert_token_name(&pool, &form).await {
+        Ok(_) => match insert_token_name(&pool, &token_name).await {
             Ok(_) => match insert_address(&pool, &contract_address_info).await {
                 Ok(_) => match insert_address(&pool, &holder_address_info).await {
                     Ok(_) => match insert_holder_totals(
