@@ -1,7 +1,7 @@
-use unicode_segmentation::UnicodeSegmentation;
 use sqlx::Type;
+use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, sqlx::Type)]
 pub enum Network {
     ETH,
     BSC,
@@ -74,76 +74,11 @@ impl AsRef<str> for Network {
     }
 }
 
-#[derive(Debug)]
-pub struct Address(String);
-
-impl Address {
-    pub fn parse(s: String) -> Result<Address, String> {
-        let is_empty_or_whitespace = s.trim().is_empty();
-        let is_too_long = s.graphemes(true).count() > 256;
-        let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-        let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
-        if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            panic!("{}", format!("{} is not a valid address.", &s))
-        } else {
-            Ok(Self(s))
-        }
-    }
-}
-
-impl AsRef<str> for Address {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-pub struct AddressInfo {
-    pub network: Network,
-    pub address: Address,
-}
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::{Address, Network};
+    use crate::domain::{Network};
     use claim::{assert_err, assert_ok};
-
-    #[test]
-    fn a_256_grapheme_long_name_is_valid() {
-        let address = "a".repeat(256);
-        assert_ok!(Address:: parse(address));
-    }
-
-    #[test]
-    fn a_name_longer_than_256_graphemes_is_rejected() {
-        let address = "a".repeat(257);
-        assert_err!(Address::parse(address));
-    }
-
-    #[test]
-    fn whitespace_only_names_are_rejected() {
-        let address = " ".to_string();
-        assert_err!(Address::parse(address));
-    }
-
-    #[test]
-    fn empty_string_is_rejected() {
-        let address = "".to_string();
-        assert_err!(Address::parse(address));
-    }
-
-    #[test]
-    fn names_containing_an_invalid_character_are_rejected() {
-        for name in &['/', '(', ')', '"', '<', '>', '\\', '{', '}'] {
-            let address = name.to_string();
-            assert_err!(Address::parse(address));
-        }
-    }
-
-    #[test]
-    fn a_valid_name_is_parsed_successfully() {
-        let address = "Ursula Le Guin".to_string();
-        assert_ok!(Address::parse(address));
-    }
 
     #[test]
     fn a_valid_network_is_parsed_successfully() {
@@ -155,8 +90,7 @@ mod tests {
 
     #[test]
     fn an_unsupported_network_is_not_parsed() {
-        let network = "superchain".to_string();
+        let network = "somesuperchain".to_string();
         assert_err!(Network::parse(network));
     }
-
 }
