@@ -1,10 +1,10 @@
+use crate::domain::{Address, AddressInfo, Network};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use tracing_futures::Instrument;
 use uuid::Uuid;
-use crate::domain::{Address, Network, AddressInfo};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HolderData {
@@ -24,12 +24,12 @@ pub async fn insert_network(pool: &PgPool, address_info: &AddressInfo) -> Result
         "#,
         address_info.network.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -41,20 +41,17 @@ pub async fn insert_token_name(pool: &PgPool, form: &HolderData) -> Result<(), s
         "#,
         form.token_name
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
 #[tracing::instrument(name = "Saving new address in the database", skip(address_info, pool))]
-pub async fn insert_address(
-    pool: &PgPool,
-    address_info: &AddressInfo,
-) -> Result<(), sqlx::Error> {
+pub async fn insert_address(pool: &PgPool, address_info: &AddressInfo) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
                 INSERT INTO addresses (network_id, address)
@@ -67,18 +64,18 @@ pub async fn insert_address(
         address_info.network.as_ref(),
         address_info.address.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
 #[tracing::instrument(
-name = "Saving new holder totals details in the database",
-skip(form, pool, holder_address_info, contract_address_info)
+    name = "Saving new holder totals details in the database",
+    skip(form, pool, holder_address_info, contract_address_info)
 )]
 pub async fn insert_holder_totals(
     pool: &PgPool,
@@ -135,15 +132,15 @@ amount = % form.amount,
 )
 )]
 pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let network = match Network::parse(String::from(&form.0.network[..])){
+    let network = match Network::parse(String::from(&form.0.network[..])) {
         Ok(network_name) => network_name,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    let holder_address = match Address::parse(String::from(&form.0.holder_address[..])){
+    let holder_address = match Address::parse(String::from(&form.0.holder_address[..])) {
         Ok(network_name) => network_name,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    let contract_address = match Address::parse(String::from(&form.0.contract_address[..])){
+    let contract_address = match Address::parse(String::from(&form.0.contract_address[..])) {
         Ok(address) => address,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
@@ -159,7 +156,14 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
         Ok(_) => match insert_token_name(&pool, &form).await {
             Ok(_) => match insert_address(&pool, &contract_address_info).await {
                 Ok(_) => match insert_address(&pool, &holder_address_info).await {
-                    Ok(_) => match insert_holder_totals(&pool, &holder_address_info, &contract_address_info, &form).await {
+                    Ok(_) => match insert_holder_totals(
+                        &pool,
+                        &holder_address_info,
+                        &contract_address_info,
+                        &form,
+                    )
+                    .await
+                    {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
                     },

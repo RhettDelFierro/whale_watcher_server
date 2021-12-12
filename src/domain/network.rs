@@ -1,6 +1,6 @@
+use super::MAX_LIMIT_CHARACTERS;
 use sqlx::Type;
 use unicode_segmentation::UnicodeSegmentation;
-use super::MAX_LIMIT_CHARACTERS;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, sqlx::Type)]
 pub enum Network {
@@ -73,7 +73,6 @@ impl AsRef<str> for Network {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

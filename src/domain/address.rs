@@ -1,5 +1,5 @@
-use unicode_segmentation::UnicodeSegmentation;
 use super::MAX_LIMIT_CHARACTERS;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug)]
 pub struct Address(String);
@@ -26,14 +26,14 @@ impl AsRef<str> for Address {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::MAX_LIMIT_CHARACTERS;
     use super::Address;
+    use crate::domain::MAX_LIMIT_CHARACTERS;
     use claim::{assert_err, assert_ok};
 
     #[test]
     fn a_256_grapheme_long_name_is_valid() {
         let address = "a".repeat(MAX_LIMIT_CHARACTERS);
-        assert_ok!(Address:: parse(address));
+        assert_ok!(Address::parse(address));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use super::{Address,Network};
+use super::{Address, Network};
 
 pub struct AddressInfo {
     pub network: Network,
