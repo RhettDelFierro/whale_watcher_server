@@ -1,4 +1,4 @@
-use crate::domain::{Address,Network};
+use super::{Address,Network};
 
 pub struct AddressInfo {
     pub network: Network,

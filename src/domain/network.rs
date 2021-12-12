@@ -1,5 +1,6 @@
 use sqlx::Type;
 use unicode_segmentation::UnicodeSegmentation;
+use super::MAX_LIMIT_CHARACTERS;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Debug, Clone, sqlx::Type)]
 pub enum Network {
@@ -39,20 +40,19 @@ fn derive_network(s: &str) -> Result<Network, String> {
     } else if str == "moonriver" || str == "movr" {
         return Ok(Network::MOVR);
     }
-    Err(String::from("network not supported"))
+    Err(format!("{} network not supported", s))
 }
 
 impl Network {
     pub fn parse(s: String) -> Result<Network, String> {
         let is_empty_or_whitespace = s.trim().is_empty();
-        let is_too_long = s.graphemes(true).count() > 256;
+        let is_too_long = s.graphemes(true).count() > MAX_LIMIT_CHARACTERS;
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
         let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
-        let network = derive_network(&s);
-        if is_empty_or_whitespace || is_too_long || contains_forbidden_characters || network.is_err() {
-            panic!("{}", format!("{} is not a valid network name.", s))
+        if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
+            Err(format!("{} is not a valid subscriber name.", s))
         } else {
-            network
+            derive_network(&s)
         }
     }
 }
@@ -77,7 +77,7 @@ impl AsRef<str> for Network {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::{Network};
+    use super::Network;
     use claim::{assert_err, assert_ok};
 
     #[test]
