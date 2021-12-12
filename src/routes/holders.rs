@@ -1,13 +1,14 @@
-use crate::domain::{Address, AddressInfo, Network, TokenName};
+use crate::domain::{Address, HolderTotal, Network, TokenName};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use tracing_futures::Instrument;
 use uuid::Uuid;
+use std::convert::{TryFrom, TryInto};
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct HolderData {
+pub struct FormData {
     network: String,
     token_name: String,
     contract_address: String,
@@ -16,20 +17,41 @@ pub struct HolderData {
     amount: BigDecimal,
 }
 
-#[tracing::instrument(name = "Saving new network in the database", skip(address_info, pool))]
-pub async fn insert_network(pool: &PgPool, address_info: &AddressInfo) -> Result<(), sqlx::Error> {
+impl TryFrom<FormData> for HolderTotal {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let network = Network::parse(value.network)?;
+        let token_name = TokenName::parse(value.token_name)?;
+        let contract_address = Address::parse(value.contract_address)?;
+        let holder_address = Address::parse(value.holder_address)?;
+        let place = value.place;
+        let amount = value.amount;
+        Ok(Self {
+            network,
+            token_name,
+            contract_address,
+            holder_address,
+            place,
+            amount
+        })
+    }
+}
+
+#[tracing::instrument(name = "Saving new network in the database", skip(network, pool))]
+pub async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
-        address_info.network.as_ref()
+        network.as_ref()
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
@@ -41,17 +63,17 @@ pub async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<
         "#,
         token_name.as_ref()
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
-#[tracing::instrument(name = "Saving new address in the database", skip(address_info, pool))]
-pub async fn insert_address(pool: &PgPool, address_info: &AddressInfo) -> Result<(), sqlx::Error> {
+#[tracing::instrument(name = "Saving new address in the database", skip(network, address, pool))]
+pub async fn insert_address(pool: &PgPool, network: &Network, address: &Address) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
                 INSERT INTO addresses (network_id, address)
@@ -61,27 +83,25 @@ pub async fn insert_address(pool: &PgPool, address_info: &AddressInfo) -> Result
                 )
                 ON CONFLICT DO NOTHING;
                 "#,
-        address_info.network.as_ref(),
-        address_info.address.as_ref()
+        network.as_ref(),
+        address.as_ref()
     )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+        .execute(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to execute query: {:?}", e);
+            e
+        })?;
     Ok(())
 }
 
 #[tracing::instrument(
-    name = "Saving new holder totals details in the database",
-    skip(form, pool, holder_address_info, contract_address_info)
+name = "Saving new holder totals details in the database",
+skip(pool, holder_total)
 )]
 pub async fn insert_holder_totals(
     pool: &PgPool,
-    holder_address_info: &AddressInfo,
-    contract_address_info: &AddressInfo,
-    form: &HolderData,
+    holder_total: &HolderTotal
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -96,13 +116,13 @@ pub async fn insert_holder_totals(
             $7
         );
         "#,
-        holder_address_info.network.as_ref(),
-        holder_address_info.address.as_ref(),
-        form.token_name,
-        form.place,
-        form.amount,
+        holder_total.network.as_ref(),
+        holder_total.holder_address.as_ref(),
+        holder_total.token_name.as_ref(),
+        holder_total.place,
+        holder_total.amount,
         Utc::now(),
-        contract_address_info.address.as_ref(),
+        holder_total.contract_address.as_ref(),
     )
         .execute(pool)
         .await
@@ -113,61 +133,32 @@ pub async fn insert_holder_totals(
     Ok(())
 }
 
-#[derive(serde::Deserialize)]
-pub struct Parameters {
-    network: String,
-    contract_address: String,
-}
-
 #[tracing::instrument(
-    name = "Adding a new holder.",
-    skip(form, pool),
-    fields(
-        network = % form.network,
-        token_name = % form.token_name,
-        contract_address = % form.contract_address,
-        holder_address = % form.holder_address,
-        place = % form.place,
-        amount = % form.amount,
-    )
+name = "Adding a new holder.",
+skip(form, pool),
+fields(
+network = % form.network,
+token_name = % form.token_name,
+contract_address = % form.contract_address,
+holder_address = % form.holder_address,
+place = % form.place,
+amount = % form.amount,
+)
 )]
-pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let network = match Network::parse(String::from(&form.0.network[..])) {
-        Ok(network_name) => network_name,
+pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
+    let holder_total: HolderTotal = match form.0.try_into() {
+        Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    let token_name = match TokenName::parse(String::from(&form.0.token_name[..])) {
-        Ok(token_name) => token_name,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let holder_address = match Address::parse(String::from(&form.0.holder_address[..])) {
-        Ok(network_name) => network_name,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let contract_address = match Address::parse(String::from(&form.0.contract_address[..])) {
-        Ok(address) => address,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let contract_address_info = AddressInfo {
-        network: network.clone(),
-        address: contract_address,
-    };
-    let holder_address_info = AddressInfo {
-        network: network.clone(),
-        address: holder_address,
-    };
-
-    match insert_network(&pool, &holder_address_info).await {
-        Ok(_) => match insert_token_name(&pool, &token_name).await {
-            Ok(_) => match insert_address(&pool, &contract_address_info).await {
-                Ok(_) => match insert_address(&pool, &holder_address_info).await {
+    match insert_network(&pool, &holder_total.network).await {
+        Ok(_) => match insert_token_name(&pool, &holder_total.token_name).await {
+            Ok(_) => match insert_address(&pool, &holder_total.network, &holder_total.contract_address).await {
+                Ok(_) => match insert_address(&pool, &holder_total.network, &holder_total.holder_address).await {
                     Ok(_) => match insert_holder_totals(
                         &pool,
-                        &holder_address_info,
-                        &contract_address_info,
-                        &form,
+                        &holder_total
                     )
-                    .await
+                        .await
                     {
                         Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -182,9 +173,15 @@ pub async fn add_holder(form: web::Form<HolderData>, pool: web::Data<PgPool>) ->
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct Parameters {
+    network: String,
+    contract_address: String,
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HoldersResponse {
-    pub data: Vec<HolderData>,
+    pub data: Vec<FormData>,
 }
 
 #[tracing::instrument(
@@ -216,9 +213,9 @@ pub async fn get_holder(
     ).fetch_all(pool.get_ref())
         .await {
         Ok(rows) => {
-            let mut holders: Vec<HolderData> = vec![];
+            let mut holders: Vec<FormData> = vec![];
             for row in rows {
-                let holder = HolderData {
+                let holder = FormData {
                     network: row.network_name,
                     token_name: row.token_name,
                     contract_address: row.contract_address,
