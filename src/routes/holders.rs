@@ -3,9 +3,9 @@ use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::PgPool;
+use std::convert::{TryFrom, TryInto};
 use tracing_futures::Instrument;
 use uuid::Uuid;
-use std::convert::{TryFrom, TryInto};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct FormData {
@@ -33,7 +33,7 @@ impl TryFrom<FormData> for HolderTotal {
             contract_address,
             holder_address,
             place,
-            amount
+            amount,
         })
     }
 }
@@ -46,12 +46,12 @@ pub async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx
         "#,
         network.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -63,17 +63,24 @@ pub async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<
         "#,
         token_name.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
-#[tracing::instrument(name = "Saving new address in the database", skip(network, address, pool))]
-pub async fn insert_address(pool: &PgPool, network: &Network, address: &Address) -> Result<(), sqlx::Error> {
+#[tracing::instrument(
+    name = "Saving new address in the database",
+    skip(network, address, pool)
+)]
+pub async fn insert_address(
+    pool: &PgPool,
+    network: &Network,
+    address: &Address,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
                 INSERT INTO addresses (network_id, address)
@@ -86,22 +93,22 @@ pub async fn insert_address(pool: &PgPool, network: &Network, address: &Address)
         network.as_ref(),
         address.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
 #[tracing::instrument(
-name = "Saving new holder totals details in the database",
-skip(pool, holder_total)
+    name = "Saving new holder totals details in the database",
+    skip(pool, holder_total)
 )]
 pub async fn insert_holder_totals(
     pool: &PgPool,
-    holder_total: &HolderTotal
+    holder_total: &HolderTotal,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -134,16 +141,16 @@ pub async fn insert_holder_totals(
 }
 
 #[tracing::instrument(
-name = "Adding a new holder.",
-skip(form, pool),
-fields(
-network = % form.network,
-token_name = % form.token_name,
-contract_address = % form.contract_address,
-holder_address = % form.holder_address,
-place = % form.place,
-amount = % form.amount,
-)
+    name = "Adding a new holder.",
+    skip(form, pool),
+    fields(
+        network = % form.network,
+        token_name = % form.token_name,
+        contract_address = % form.contract_address,
+        holder_address = % form.holder_address,
+        place = % form.place,
+        amount = % form.amount,
+    )
 )]
 pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     let holder_total: HolderTotal = match form.0.try_into() {
@@ -152,21 +159,26 @@ pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> H
     };
     match insert_network(&pool, &holder_total.network).await {
         Ok(_) => match insert_token_name(&pool, &holder_total.token_name).await {
-            Ok(_) => match insert_address(&pool, &holder_total.network, &holder_total.contract_address).await {
-                Ok(_) => match insert_address(&pool, &holder_total.network, &holder_total.holder_address).await {
-                    Ok(_) => match insert_holder_totals(
+            Ok(_) => {
+                match insert_address(&pool, &holder_total.network, &holder_total.contract_address)
+                    .await
+                {
+                    Ok(_) => match insert_address(
                         &pool,
-                        &holder_total
+                        &holder_total.network,
+                        &holder_total.holder_address,
                     )
-                        .await
+                    .await
                     {
-                        Ok(_) => HttpResponse::Ok().finish(),
+                        Ok(_) => match insert_holder_totals(&pool, &holder_total).await {
+                            Ok(_) => HttpResponse::Ok().finish(),
+                            Err(_) => HttpResponse::InternalServerError().finish(),
+                        },
                         Err(_) => HttpResponse::InternalServerError().finish(),
                     },
                     Err(_) => HttpResponse::InternalServerError().finish(),
-                },
-                Err(_) => HttpResponse::InternalServerError().finish(),
-            },
+                }
+            }
             Err(_) => HttpResponse::InternalServerError().finish(),
         },
         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -185,12 +197,12 @@ pub struct HoldersResponse {
 }
 
 #[tracing::instrument(
-name = "Fetching holders.",
-skip(parameters, pool),
-fields(
-network = % parameters.network,
-contract_address = % parameters.contract_address
-)
+    name = "Fetching holders.",
+    skip(parameters, pool),
+    fields(
+        network = % parameters.network,
+        contract_address = % parameters.contract_address
+    )
 )]
 pub async fn get_holder(
     parameters: web::Query<Parameters>,
