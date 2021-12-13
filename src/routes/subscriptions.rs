@@ -1,4 +1,4 @@
-use crate::domain::{NewSubscriber, Email, SubscriberName};
+use crate::domain::{Email, NewSubscriber, SubscriberName};
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use sqlx::PgPool;
@@ -42,8 +42,8 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
 }
 
 #[tracing::instrument(
-name = "Saving new subscriber details in the database",
-skip(new_subscriber, pool)
+    name = "Saving new subscriber details in the database",
+    skip(new_subscriber, pool)
 )]
 pub async fn insert_subscriber(
     pool: &PgPool,
@@ -59,11 +59,11 @@ pub async fn insert_subscriber(
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }

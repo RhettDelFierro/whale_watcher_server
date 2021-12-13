@@ -140,6 +140,7 @@ pub async fn insert_holder_totals(
     Ok(())
 }
 
+#[allow(clippy::async_yields_async)]
 #[tracing::instrument(
 name = "Adding a new holder.",
 skip(form, pool),
@@ -196,6 +197,7 @@ pub struct HoldersResponse {
     pub data: Vec<FormData>,
 }
 
+#[allow(clippy::async_yields_async)]
 #[tracing::instrument(
 name = "Fetching holders.",
 skip(parameters, pool),

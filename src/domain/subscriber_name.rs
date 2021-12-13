@@ -4,9 +4,6 @@ use unicode_segmentation::UnicodeSegmentation;
 pub struct SubscriberName(String);
 
 impl SubscriberName {
-    /// Returns an instance of `SubscriberName` if the input satisfies all
-    /// our validation constraints on subscriber names.
-    /// It panics otherwise.
     pub fn parse(s: String) -> Result<SubscriberName, String> {
         let is_empty_or_whitespace = s.trim().is_empty();
         let is_too_long = s.graphemes(true).count() > 256;

@@ -11,7 +11,7 @@ impl TokenName {
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}', '_'];
         let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            Err(format!("{} is not a valid TokenName.", s))
+            Err(format!("{} is not a valid token name.", s))
         } else {
             Ok(Self(s))
         }

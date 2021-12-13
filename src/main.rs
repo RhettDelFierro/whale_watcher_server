@@ -1,6 +1,7 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::net::TcpListener;
 use whale_watcher_server::configuration::get_configuration;
+use whale_watcher_server::email_client::EmailClient;
 use whale_watcher_server::startup::run;
 use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
 
@@ -22,6 +23,13 @@ async fn main() -> std::io::Result<()> {
         configuration.application.host, configuration.application.port
     );
     let listener = TcpListener::bind(address)?;
-    run(listener, connection_pool)?.await?;
+
+    let sender_email = configuration
+        .email_client
+        .sender()
+        .expect("Invalid sender email address.");
+    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email);
+
+    run(listener, connection_pool, email_client)?.await?;
     Ok(())
 }
