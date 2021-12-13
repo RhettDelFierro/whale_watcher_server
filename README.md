@@ -14,3 +14,15 @@ amount: 12345.0012345
 
 Get Requests to fetch data:
 https://whalewatcherserver-th48j.ondigitalocean.app/holders/?network=bsc&contract_address=rereshfdzfdxgfx
+
+To edit tables use:
+```
+sqlx migrate add <your migration>
+SKIP_DOCKER=true ./scripts/init_db.sh
+```
+
+Any changes to writing sql on the routes will need to be prepared using sqlx for easier deployment:
+```
+cargo clean
+cargo sqlx prepare -- --bin whale_watcher_server
+```
