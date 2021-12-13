@@ -141,16 +141,16 @@ pub async fn insert_holder_totals(
 }
 
 #[tracing::instrument(
-    name = "Adding a new holder.",
-    skip(form, pool),
-    fields(
-        network = % form.network,
-        token_name = % form.token_name,
-        contract_address = % form.contract_address,
-        holder_address = % form.holder_address,
-        place = % form.place,
-        amount = % form.amount,
-    )
+name = "Adding a new holder.",
+skip(form, pool),
+fields(
+network = % form.network,
+token_name = % form.token_name,
+contract_address = % form.contract_address,
+holder_address = % form.holder_address,
+place = % form.place,
+amount = % form.amount,
+)
 )]
 pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     let holder_total: HolderTotal = match form.0.try_into() {
@@ -197,12 +197,12 @@ pub struct HoldersResponse {
 }
 
 #[tracing::instrument(
-    name = "Fetching holders.",
-    skip(parameters, pool),
-    fields(
-        network = % parameters.network,
-        contract_address = % parameters.contract_address
-    )
+name = "Fetching holders.",
+skip(parameters, pool),
+fields(
+network = % parameters.network,
+contract_address = % parameters.contract_address
+)
 )]
 pub async fn get_holder(
     parameters: web::Query<Parameters>,
@@ -222,10 +222,13 @@ pub async fn get_holder(
         "#,
         parameters.network,
         parameters.contract_address,
-    ).fetch_all(pool.get_ref())
+    )
+        .fetch_all(pool.get_ref())
         .await {
         Ok(rows) => {
-            let mut holders: Vec<FormData> = vec![];
+            let mut holders: HoldersResponse = HoldersResponse {
+                data: vec![]
+            };
             for row in rows {
                 let holder = FormData {
                     network: row.network_name,
@@ -235,12 +238,9 @@ pub async fn get_holder(
                     place: row.place,
                     amount: row.amount,
                 };
-                holders.push(holder);
+                holders.data.push(holder);
             };
-            let response = HoldersResponse {
-                data: holders
-            };
-            HttpResponse::Ok().json(response)
+            HttpResponse::Ok().json(holders)
         }
         Err(e) => {
             HttpResponse::InternalServerError().finish()
