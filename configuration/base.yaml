@@ -9,6 +9,6 @@ database:
   database_name: "whale"
   require_ssl: false
 email_client:
-  base_url: "http://localhost:8000"
+  base_url: "https://localhost:8000"
   sender_email: "test@gmail.com"
   authorization_token: "my-secret-token"
