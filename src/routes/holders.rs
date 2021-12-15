@@ -1,5 +1,5 @@
+use super::{insert_address, insert_network, insert_token_name};
 use crate::domain::{Address, HolderTotal, Network, TokenName};
-use super::{insert_network,insert_address,insert_token_name};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;

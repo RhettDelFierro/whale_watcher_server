@@ -1,4 +1,4 @@
-use super::{Address, Network, TokenName, Notes};
+use super::{Address, Network, Notes, TokenName};
 use sqlx::types::BigDecimal;
 
 pub struct ScamCreator {

@@ -1,5 +1,5 @@
-use crate::domain::{Address, Network, Notes, ScamType, ScamCreator};
-use super::{insert_network,insert_address};
+use super::{insert_address, insert_network};
+use crate::domain::{Address, Network, Notes, ScamCreator, ScamType};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -17,6 +17,9 @@ pub struct FormData {
     scam_type: String,
 }
 
-pub async fn register_scam_token(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn register_scam_token(
+    form: web::Form<FormData>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
     HttpResponse::Ok().finish()
 }

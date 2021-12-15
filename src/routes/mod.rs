@@ -1,18 +1,18 @@
 mod health_check;
 mod holders;
-mod subscriptions;
 mod scam_creators;
 mod scam_tokens;
+mod subscriptions;
 
 pub use health_check::*;
 pub use holders::*;
-pub use subscriptions::*;
 pub use scam_creators::*;
 pub use scam_tokens::*;
+pub use subscriptions::*;
 
-use tracing_futures::Instrument;
 use crate::domain::{Address, HolderTotal, Network, TokenName};
 use sqlx::PgPool;
+use tracing_futures::Instrument;
 
 #[tracing::instrument(name = "Saving new network in the database", skip(network, pool))]
 async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Error> {
@@ -22,12 +22,12 @@ async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Er
         "#,
         network.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
@@ -39,18 +39,18 @@ async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<(), 
         "#,
         token_name.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }
 
 #[tracing::instrument(
-name = "Saving new address in the database",
-skip(network, address, pool)
+    name = "Saving new address in the database",
+    skip(network, address, pool)
 )]
 async fn insert_address(
     pool: &PgPool,
@@ -69,11 +69,11 @@ async fn insert_address(
         network.as_ref(),
         address.as_ref()
     )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(())
 }

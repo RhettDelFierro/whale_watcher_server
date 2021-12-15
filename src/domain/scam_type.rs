@@ -6,7 +6,7 @@ use unicode_segmentation::UnicodeSegmentation;
 pub enum ScamType {
     HoneyPot,
     LiquidityPull,
-    RugPull
+    RugPull,
 }
 
 fn derive_scam(s: &str) -> Result<ScamType, String> {
@@ -18,7 +18,10 @@ fn derive_scam(s: &str) -> Result<ScamType, String> {
     } else if str == "honeypot" || str == "honey pot" || str == "honey_pot" {
         return Ok(ScamType::HoneyPot);
     }
-    Err(format!("{} scam type not supported: please use either rugpull, liquiditypull or honeypot", s))
+    Err(format!(
+        "{} scam type not supported: please use either rugpull, liquiditypull or honeypot",
+        s
+    ))
 }
 
 impl ScamType {
@@ -38,9 +41,9 @@ impl ScamType {
 impl AsRef<str> for ScamType {
     fn as_ref(&self) -> &str {
         match self {
-           ScamType::LiquidityPull => "liquidity_pull",
+            ScamType::LiquidityPull => "liquidity_pull",
             ScamType::RugPull => "rug_pull",
-            ScamType::HoneyPot => "honeypot"
+            ScamType::HoneyPot => "honeypot",
         }
     }
 }

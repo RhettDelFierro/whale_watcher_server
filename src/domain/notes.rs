@@ -5,15 +5,23 @@ use unicode_segmentation::UnicodeSegmentation;
 pub struct Notes(String);
 
 impl Notes {
-    pub fn parse(s: String) -> Result<Notes, String> {
-        let is_too_long = s.graphemes(true).count() > MAX_LIMIT_CHARACTERS;
-        let forbidden_characters = ['"', '<', '>', '\\', '{', '}', '_'];
-        let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
-        if is_too_long || contains_forbidden_characters {
-            Err(format!("{} is not a valid token name.", s))
-        } else {
-            Ok(Self(s))
+    pub fn parse(s: Option<String>) -> Result<Notes, String> {
+        match s {
+            Some(s) => {
+                let is_too_long = s.graphemes(true).count() > MAX_LIMIT_CHARACTERS;
+                let forbidden_characters = ['"', '<', '>', '\\', '{', '}', '_'];
+                let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
+                if is_too_long || contains_forbidden_characters {
+                    Err(format!("{} is not a valid token name.", s))
+                } else {
+                    Ok(Self(s))
+                }
+            },
+            None => {
+                Ok(Self("".to_owned()))
+            }
         }
+
     }
 }
 
