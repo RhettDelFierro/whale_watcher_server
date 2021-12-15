@@ -27,7 +27,8 @@ pub struct TestApp {
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
-            .post(&format!("{}/subscriptions", &self.address)).header("Content-Type", "application/x-www-form-urlencoded")
+            .post(&format!("{}/subscriptions", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
             .await
@@ -35,7 +36,8 @@ impl TestApp {
     }
     pub async fn post_holders(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
-            .post(&format!("{}/holders", &self.address)).header("Content-Type", "application/x-www-form-urlencoded")
+            .post(&format!("{}/holders", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
             .send()
             .await
@@ -75,6 +77,7 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
         .await
         .expect("Failed to create database.");
+
     // Migrate database
     let connection_pool = PgPool::connect_with(config.with_db())
         .await
@@ -83,5 +86,6 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .run(&connection_pool)
         .await
         .expect("Failed to migrate the database");
+
     connection_pool
 }

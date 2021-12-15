@@ -36,10 +36,7 @@ impl Application {
         let port = listener.local_addr().unwrap().port();
         let server = run(listener, connection_pool, email_client)?;
         // We "save" the bound port in one of `Application`'s fields
-        Ok(Self {
-            port,
-            server
-        })
+        Ok(Self { port, server })
     }
     pub fn port(&self) -> u16 {
         self.port

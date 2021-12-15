@@ -1,6 +1,6 @@
 use whale_watcher_server::configuration::get_configuration;
-use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
 use whale_watcher_server::startup::Application;
+use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
