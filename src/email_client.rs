@@ -25,10 +25,7 @@ impl EmailClient {
         authorization_token: String,
         timeout: std::time::Duration,
     ) -> Self {
-        let http_client = Client::builder()
-            .timeout(timeout)
-            .build()
-            .unwrap();
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
         Self {
             http_client,
             base_url: reqwest::Url::parse(&base_url).unwrap(),
@@ -170,15 +167,15 @@ mod tests {
     #[tokio::test]
     async fn send_email_times_out_if_the_server_takes_too_long() {
         let mock_server = MockServer::start().await;
-        let response = ResponseTemplate::new(200)
-            .set_delay(std::time::Duration::from_secs(180));
+        let response = ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(180));
         Mock::given(any())
             .respond_with(response)
             .expect(1)
             .mount(&mock_server)
             .await;
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content(), &content()).await;
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
         assert_err!(outcome);
     }
 }
