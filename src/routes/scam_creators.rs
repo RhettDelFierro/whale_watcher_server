@@ -1,5 +1,5 @@
 use super::{insert_address, insert_network};
-use crate::domain::{Address, Network, Notes, ScamCreator, ScamType};
+use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, ScammerQuery};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -92,6 +92,19 @@ pub struct ScammerParameters {
     scammer_address: String,
 }
 
+impl TryFrom<ScammerParameters> for ScammerQuery {
+    type Error = String;
+
+    fn try_from(value: ScammerParameters) -> Result<Self, Self::Error> {
+        let network = Network::parse(value.network)?;
+        let scammer_address = Address::parse(value.scammer_address)?;
+        Ok(Self {
+            network,
+            scammer_address,
+        })
+    }
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct ScamTokenResponse {
     pub data: Vec<FormDataScammers>,
@@ -101,6 +114,10 @@ pub async fn get_scammers(
     parameters: web::Query<ScammerParameters>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
+    let scammer_query: ScammerQuery = match parameters.0.try_into() {
+        Ok(form) => form,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
     match sqlx::query!(
         r#"
         SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s
@@ -109,8 +126,8 @@ pub async fn get_scammers(
         WHERE s.address = $2
         ;
         "#,
-        parameters.network,
-        parameters.scammer_address,
+        scammer_query.network.as_ref(),
+        scammer_query.scammer_address.as_ref(),
     )
         .fetch_all(pool.get_ref())
         .await {
