@@ -2,22 +2,15 @@ use crate::helpers::spawn_app;
 
 #[actix_rt::test]
 async fn holders_returns_a_200_for_validform_data() {
-    let test_app = spawn_app().await;
-    let client = reqwest::Client::new();
+    let app = spawn_app().await;
     let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
 
-    let response = client
-        .post(&format!("{}/holders", test_app.address))
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .expect("Failed to execute post request to /holders.");
+    let response = app.post_holders(body.into()).await;
 
     assert_eq!(200, response.status().as_u16());
 
     let saved = sqlx::query!("SELECT address FROM addresses",)
-        .fetch_one(&test_app.db_pool)
+        .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
@@ -26,8 +19,7 @@ async fn holders_returns_a_200_for_validform_data() {
 
 #[actix_rt::test]
 async fn holders_returns_a_400_when_data_is_missing() {
-    let test_app = spawn_app().await;
-    let client = reqwest::Client::new();
+    let app = spawn_app().await;
     let test_cases = vec![
         ("token_name=kitty", "token_name"),
         (
@@ -45,13 +37,7 @@ async fn holders_returns_a_400_when_data_is_missing() {
     ];
 
     for (invalid_body, error_message) in test_cases {
-        let response = client
-            .post(&format!("{}/holders", test_app.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+        let response = app.post_holders(invalid_body.into()).await;
 
         assert_eq!(
             400,
