@@ -1,5 +1,20 @@
 {
   "db": "PostgreSQL",
+  "14f3ee32c207f8433196160e48f8f2c3406c5f158d0338e727157a23899ea862": {
+    "query": "\n        INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)\n        VALUES (\n            $1,\n            $2,\n            (SELECT network_id FROM networks WHERE network_name = $3),\n            $4\n        );\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "52f7dcd8539cbcda21c79ff4461fc0ddbd2fcf42278beb7bca0fcc0508a5fe23": {
     "query": "\n        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;\n        ",
     "describe": {
@@ -97,6 +112,60 @@
         false,
         false
       ]
+    }
+  },
+  "b6b3e87f70f1294f4a4cc9f5dd0a827dc05095d558a0c3c1759ab66562188c93": {
+    "query": "\n        SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s\n        INNER JOIN networks n\n            ON s.network_of_scammed_token = n.network_id AND n.network_name = $1\n        WHERE s.address = $2\n        ;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "notes",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "network_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "scammed_contract_address",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        true,
+        false,
+        false
+      ]
+    }
+  },
+  "ba09b126ddbf3e1f15e1df7fd6576f9dfdd1347874ce318323267cc9704187c7": {
+    "query": "\n        INSERT INTO subscriptions (id, email, name, subscribed_at, status)\n        VALUES ($1, $2, $3, $4, 'confirmed')\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Timestamptz"
+        ]
+      },
+      "nullable": []
     }
   },
   "c55342d4abbde9ad6babc3da0fbf79e3fa6bacbe4fd196b13e970c9bd99c4716": {
