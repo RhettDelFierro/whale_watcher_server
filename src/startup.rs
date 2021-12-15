@@ -1,7 +1,7 @@
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
-use crate::routes::{add_holder, get_holder, health_check, subscribe};
+use crate::routes::{add_holder, get_holder, health_check, subscribe, register_scammer, register_scam_token};
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
 use sqlx::postgres::PgPoolOptions;
@@ -67,6 +67,8 @@ pub fn run(
             .route("/holders", web::post().to(add_holder))
             .route("/holders", web::get().to(get_holder))
             .route("/subscriptions", web::post().to(subscribe))
+            .route("/scam/tokens", web::post().to(register_scammer))
+            .route("/scam/creators", web::post().to(register_scam_token))
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
     })

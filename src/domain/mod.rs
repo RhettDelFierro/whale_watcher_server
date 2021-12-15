@@ -5,6 +5,10 @@ mod network;
 mod new_subscriber;
 mod subscriber_name;
 mod token_name;
+mod notes;
+mod scam_creator;
+mod scam_token;
+mod scam_type;
 
 pub use address::Address;
 pub use email::Email;
@@ -13,5 +17,9 @@ pub use network::Network;
 pub use new_subscriber::NewSubscriber;
 pub use subscriber_name::SubscriberName;
 pub use token_name::TokenName;
+pub use notes::Notes;
+pub use scam_creator::ScamCreator;
+pub use scam_token::ScamToken;
+pub use scam_type::ScamType;
 
 const MAX_LIMIT_CHARACTERS: usize = 255;

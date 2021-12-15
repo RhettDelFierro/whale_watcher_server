@@ -1,4 +1,5 @@
 use crate::domain::{Address, HolderTotal, Network, TokenName};
+use super::{insert_network,insert_address,insert_token_name};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -36,70 +37,6 @@ impl TryFrom<FormData> for HolderTotal {
             amount,
         })
     }
-}
-
-#[tracing::instrument(name = "Saving new network in the database", skip(network, pool))]
-pub async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
-        "#,
-        network.as_ref()
-    )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
-    Ok(())
-}
-
-#[tracing::instrument(name = "Saving new token name in the database", skip(token_name, pool))]
-pub async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-        INSERT INTO token_names (token_name) VALUES ($1) ON CONFLICT DO NOTHING;
-        "#,
-        token_name.as_ref()
-    )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
-    Ok(())
-}
-
-#[tracing::instrument(
-    name = "Saving new address in the database",
-    skip(network, address, pool)
-)]
-pub async fn insert_address(
-    pool: &PgPool,
-    network: &Network,
-    address: &Address,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        r#"
-                INSERT INTO addresses (network_id, address)
-                VALUES (
-                 (SELECT network_id FROM networks WHERE network_name = $1),
-                 $2
-                )
-                ON CONFLICT DO NOTHING;
-                "#,
-        network.as_ref(),
-        address.as_ref()
-    )
-    .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
-    Ok(())
 }
 
 #[tracing::instrument(
