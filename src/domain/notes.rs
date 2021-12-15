@@ -40,26 +40,31 @@ mod tests {
     #[test]
     fn a_256_grapheme_long_name_is_valid() {
         let notes = "a".repeat(MAX_LIMIT_CHARACTERS);
-        assert_ok!(Notes::parse(notes));
+        assert_ok!(Notes::parse(Some(notes)));
     }
 
     #[test]
     fn a_name_longer_than_256_graphemes_is_rejected() {
         let notes = "a".repeat(MAX_LIMIT_CHARACTERS + 1);
-        assert_err!(Notes::parse(notes));
+        assert_err!(Notes::parse(Some(notes)));
     }
 
     #[test]
     fn names_containing_an_invalid_character_are_rejected() {
         for note in &['"', '<', '>', '\\', '{', '}', '_'] {
             let char = note.to_string();
-            assert_err!(Notes::parse(char));
+            assert_err!(Notes::parse(Some(char)));
         }
     }
 
     #[test]
     fn a_valid_name_is_parsed_successfully() {
         let notes = "SomethingorAnother$".to_string();
-        assert_ok!(Notes::parse(notes));
+        assert_ok!(Notes::parse(Some(notes)));
+    }
+
+    #[test]
+    fn a_value_of_none_is_parsed_successfully() {
+        assert_ok!(Notes::parse(None));
     }
 }
