@@ -1,6 +1,11 @@
 use whale_watcher_server::configuration::Environment::Production;
 use crate::helpers::spawn_app;
 
+const ADDRESS: &str = "0x18ce832a86C207eeC301437f3dE05Aa11fd79fc1";
+const NOTES: &str = "ladytigercat creator (honeypot)";
+const NETWORK_OF_SCAMMED_TOKEN: &str = "eth";
+const SCAMMED_TOKEN_ADDRESS: &str = "0xB91f05B798f8A010A1BDdbFf75dC3D106dC84B50";
+
 #[derive(serde::Deserialize, Debug)]
 struct ScammerResponse {
     data: Vec<Scammer>
@@ -18,22 +23,17 @@ struct Scammer {
 async fn register_scammer_returns_a_200_for_valid_form_data() {
     // Arrange
     let app = spawn_app().await;
-    let client = reqwest::Client::new();
-    let address = "0x18ce832a86C207eeC301437f3dE05Aa11fd79fc1";
-    let notes = "ladytigercat creator (honeypot)";
-    let network_of_scammed_token = "eth";
-    let scammed_contract_address = "0xB91f05B798f8A010A1BDdbFf75dC3D106dC84B50";
     let body = format!(
         "address={}&notes={}&network_of_scammed_token={}&scammed_contract_address={}",
-        address,
-        notes,
-        network_of_scammed_token,
-        scammed_contract_address
+        ADDRESS,
+        NOTES,
+        NETWORK_OF_SCAMMED_TOKEN,
+        SCAMMED_TOKEN_ADDRESS
     );
     let query_params = format!(
         "network={}&scammer_address={}",
-        network_of_scammed_token,
-        address,
+        NETWORK_OF_SCAMMED_TOKEN,
+        ADDRESS,
     );
     // Act
     let response_post = app.post_scam_creators(body.into()).await;
@@ -45,78 +45,57 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
 
     let response_get = response_get.json::<ScammerResponse>().await;
     let data = response_get.unwrap();
-    assert_eq!(data.data[0].address, address);
-    assert_eq!(data.data[0].notes, notes);
-    assert_eq!(data.data[0].network_of_scammed_token, network_of_scammed_token);
-    assert_eq!(data.data[0].scammed_contract_address, scammed_contract_address);
-
-    // match response_get {
-    //     Ok(data) => {
-    //         assert_eq!(data.data[0].address, address);
-    //         assert_eq!(data.data[0].notes, notes);
-    //         assert_eq!(data.data[0].network_of_scammed_token, network_of_scammed_token);
-    //         assert_eq!(data.data[0].scammed_contract_address, scammed_contract_address);
-    //     },
-    //     Err(err) => {
-    //
-    //     }
-    // }
-    // let saved = sqlx::query!("SELECT address, notes FROM scam_token_creators",)
-    //     .fetch_one(&app.db_pool)
-    //     .await
-    //     .expect("Failed to fetch saved subscription.");
-    //
-    // assert_eq!(saved.address, address);
-    // assert_eq!(saved.notes, Some(String::from(notes)));
+    assert_eq!(data.data[0].address, ADDRESS);
+    assert_eq!(data.data[0].notes, NOTES);
+    assert_eq!(data.data[0].network_of_scammed_token, NETWORK_OF_SCAMMED_TOKEN);
+    assert_eq!(data.data[0].scammed_contract_address, SCAMMED_TOKEN_ADDRESS);
 }
-//
-// #[actix_rt::test]
-// async fn register_scammer_returns_a_400_when_data_is_missing() {
-//     // Arrange
-//     let app = spawn_app().await;
-//     let client = reqwest::Client::new();
-//     let test_cases = vec![
-//         ("name=le%20guin", "missing the email"),
-//         ("email=ursula_le_guin%40gmail.com", "missing the name"),
-//         ("", "missing both name and email"),
-//     ];
-//
-//     for (invalid_body, error_message) in test_cases {
-//         // Act
-//         let response = app.post_scam_creators(invalid_body.into()).await;
-//
-//         // Assert
-//         assert_eq!(
-//             400,
-//             response.status().as_u16(),
-//             // Additional customised error message on test failure
-//             "The API did not fail with 400 Bad Request when the payload was {}.",
-//             error_message
-//         );
-//     }
-// }
-//
-// #[actix_rt::test]
-// async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
-//     // Arrange
-//     let app = spawn_app().await;
-//     let client = reqwest::Client::new();
-//     let test_cases = vec![
-//         ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
-//         ("name=Ursula&email=", "empty email"),
-//         ("name=Ursula&email=definitely-not-an-email", "invalid email"),
-//     ];
-//
-//     for (body, description) in test_cases {
-//         // Act
-//         let response = app.post_scam_creators(body.into()).await;
-//
-//         // Assert
-//         assert_eq!(
-//             400,
-//             response.status().as_u16(),
-//             "The API did not return a 400 Bad Request when the payload was {}.",
-//             description
-//         );
-//     }
-// }
+
+#[actix_rt::test]
+async fn register_scammer_returns_a_400_when_data_is_missing() {
+    let app = spawn_app().await;
+    let test_cases = vec![
+        (format!("notes={}&network_of_scammed_token={}&scammed_contract_address={}", NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS),
+         "missing the address"),
+        (format!("address={}&scammed_contract_address={}", ADDRESS, SCAMMED_TOKEN_ADDRESS), "missing network_of_scammed_token"),
+        (format!("address={}&network_of_scammed_token={}", ADDRESS, NETWORK_OF_SCAMMED_TOKEN), "missing scammed_contract_address"),
+        ("".to_string(), "no params"),
+    ];
+
+    for (invalid_body, error_message) in test_cases {
+        let response = app.post_scam_creators(invalid_body.into()).await;
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        );
+    }
+}
+
+#[actix_rt::test]
+async fn register_scammer_returns_a_400_when_fields_are_present_but_invalid() {
+    // Arrange
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        (format!("address=&notes={}&network_of_scammed_token={}&scammed_contract_address={}", NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS),
+         "empty address"),
+        (format!("address={}&network_of_scammed_token=&scammed_contract_address={}", ADDRESS, SCAMMED_TOKEN_ADDRESS), "empty scammed_contract_address"),
+        (format!("address={}&network_of_scammed_token={}&scammed_contract_address=", ADDRESS, NETWORK_OF_SCAMMED_TOKEN), "empty scammed_contract_address"),
+        ("".to_string(), "no params"),
+    ];
+
+    for (body, description) in test_cases {
+        let response = app.post_scam_creators(body.into()).await;
+
+        // Assert
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not return a 400 Bad Request when the payload was {}.",
+            description
+        );
+    }
+}
