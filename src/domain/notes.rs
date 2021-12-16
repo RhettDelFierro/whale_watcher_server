@@ -10,18 +10,16 @@ impl Notes {
             Some(s) => {
                 let is_too_long = s.graphemes(true).count() > MAX_LIMIT_CHARACTERS;
                 let forbidden_characters = ['"', '<', '>', '\\', '{', '}', '_'];
-                let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
+                let contains_forbidden_characters =
+                    s.chars().any(|g| forbidden_characters.contains(&g));
                 if is_too_long || contains_forbidden_characters {
                     Err(format!("{} is not a valid token name.", s))
                 } else {
                     Ok(Self(s))
                 }
-            },
-            None => {
-                Ok(Self("".to_owned()))
             }
+            None => Ok(Self("".to_owned())),
         }
-
     }
 }
 

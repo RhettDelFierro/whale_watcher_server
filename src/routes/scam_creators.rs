@@ -33,7 +33,7 @@ impl TryFrom<FormDataScammers> for ScamCreator {
     }
 }
 
-pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator)-> Result<(), sqlx::Error> {
+pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)
@@ -58,31 +58,40 @@ pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator)-> Result<(), s
     Ok(())
 }
 
-pub async fn register_scammer(form: web::Form<FormDataScammers>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn register_scammer(
+    form: web::Form<FormDataScammers>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
     let scam_creator: ScamCreator = match form.0.try_into() {
         Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
     match insert_network(&pool, &scam_creator.network_of_scammed_token).await {
-            Ok(_) => {
-                match insert_address(&pool, &scam_creator.network_of_scammed_token, &scam_creator.address).await {
-                    Ok(_) => match insert_address(
-                        &pool,
-                        &scam_creator.network_of_scammed_token,
-                        &scam_creator.scammed_contract_address,
-                    )
-                        .await
-                    {
-                        Ok(_) => match insert_scammer(&pool, &scam_creator).await {
-                            Ok(_) => HttpResponse::Ok().finish(),
-                            Err(_) => HttpResponse::InternalServerError().finish(),
-                        },
+        Ok(_) => {
+            match insert_address(
+                &pool,
+                &scam_creator.network_of_scammed_token,
+                &scam_creator.address,
+            )
+            .await
+            {
+                Ok(_) => match insert_address(
+                    &pool,
+                    &scam_creator.network_of_scammed_token,
+                    &scam_creator.scammed_contract_address,
+                )
+                .await
+                {
+                    Ok(_) => match insert_scammer(&pool, &scam_creator).await {
+                        Ok(_) => HttpResponse::Ok().finish(),
                         Err(_) => HttpResponse::InternalServerError().finish(),
                     },
                     Err(_) => HttpResponse::InternalServerError().finish(),
-                }
-            },
-            Err(_) => HttpResponse::InternalServerError().finish(),
+                },
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 

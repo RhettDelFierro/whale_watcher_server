@@ -1,5 +1,5 @@
-use whale_watcher_server::configuration::Environment::Production;
 use crate::helpers::spawn_app;
+use whale_watcher_server::configuration::Environment::Production;
 
 const ADDRESS: &str = "0x18ce832a86C207eeC301437f3dE05Aa11fd79fc1";
 const NOTES: &str = "ladytigercat creator (honeypot)";
@@ -8,7 +8,7 @@ const SCAMMED_TOKEN_ADDRESS: &str = "0xB91f05B798f8A010A1BDdbFf75dC3D106dC84B50"
 
 #[derive(serde::Deserialize, Debug)]
 struct ScammerResponse {
-    data: Vec<Scammer>
+    data: Vec<Scammer>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -25,15 +25,11 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
     let app = spawn_app().await;
     let body = format!(
         "address={}&notes={}&network_of_scammed_token={}&scammed_contract_address={}",
-        ADDRESS,
-        NOTES,
-        NETWORK_OF_SCAMMED_TOKEN,
-        SCAMMED_TOKEN_ADDRESS
+        ADDRESS, NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
     );
     let query_params = format!(
         "network={}&scammer_address={}",
-        NETWORK_OF_SCAMMED_TOKEN,
-        ADDRESS,
+        NETWORK_OF_SCAMMED_TOKEN, ADDRESS,
     );
     // Act
     let response_post = app.post_scam_creators(body.into()).await;
@@ -47,7 +43,10 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
     let data = response_get.unwrap();
     assert_eq!(data.data[0].address, ADDRESS);
     assert_eq!(data.data[0].notes, NOTES);
-    assert_eq!(data.data[0].network_of_scammed_token, NETWORK_OF_SCAMMED_TOKEN);
+    assert_eq!(
+        data.data[0].network_of_scammed_token,
+        NETWORK_OF_SCAMMED_TOKEN
+    );
     assert_eq!(data.data[0].scammed_contract_address, SCAMMED_TOKEN_ADDRESS);
 }
 
@@ -55,10 +54,27 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
 async fn register_scammer_returns_a_400_when_data_is_missing() {
     let app = spawn_app().await;
     let test_cases = vec![
-        (format!("notes={}&network_of_scammed_token={}&scammed_contract_address={}", NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS),
-         "missing the address"),
-        (format!("address={}&scammed_contract_address={}", ADDRESS, SCAMMED_TOKEN_ADDRESS), "missing network_of_scammed_token"),
-        (format!("address={}&network_of_scammed_token={}", ADDRESS, NETWORK_OF_SCAMMED_TOKEN), "missing scammed_contract_address"),
+        (
+            format!(
+                "notes={}&network_of_scammed_token={}&scammed_contract_address={}",
+                NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
+            ),
+            "missing the address",
+        ),
+        (
+            format!(
+                "address={}&scammed_contract_address={}",
+                ADDRESS, SCAMMED_TOKEN_ADDRESS
+            ),
+            "missing network_of_scammed_token",
+        ),
+        (
+            format!(
+                "address={}&network_of_scammed_token={}",
+                ADDRESS, NETWORK_OF_SCAMMED_TOKEN
+            ),
+            "missing scammed_contract_address",
+        ),
         ("".to_string(), "no params"),
     ];
 
@@ -80,10 +96,27 @@ async fn register_scammer_returns_a_400_when_fields_are_present_but_invalid() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
-        (format!("address=&notes={}&network_of_scammed_token={}&scammed_contract_address={}", NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS),
-         "empty address"),
-        (format!("address={}&network_of_scammed_token=&scammed_contract_address={}", ADDRESS, SCAMMED_TOKEN_ADDRESS), "empty scammed_contract_address"),
-        (format!("address={}&network_of_scammed_token={}&scammed_contract_address=", ADDRESS, NETWORK_OF_SCAMMED_TOKEN), "empty scammed_contract_address"),
+        (
+            format!(
+                "address=&notes={}&network_of_scammed_token={}&scammed_contract_address={}",
+                NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
+            ),
+            "empty address",
+        ),
+        (
+            format!(
+                "address={}&network_of_scammed_token=&scammed_contract_address={}",
+                ADDRESS, SCAMMED_TOKEN_ADDRESS
+            ),
+            "empty scammed_contract_address",
+        ),
+        (
+            format!(
+                "address={}&network_of_scammed_token={}&scammed_contract_address=",
+                ADDRESS, NETWORK_OF_SCAMMED_TOKEN
+            ),
+            "empty scammed_contract_address",
+        ),
         ("".to_string(), "no params"),
     ];
 

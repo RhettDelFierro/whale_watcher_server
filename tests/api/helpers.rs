@@ -2,11 +2,12 @@ use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
-use wiremock::matchers::query_param;
 use whale_watcher_server::configuration::{get_configuration, DatabaseSettings};
 use whale_watcher_server::email_client::EmailClient;
 use whale_watcher_server::startup::{get_connection_pool, Application};
 use whale_watcher_server::telemetry::{get_subscriber, init_subscriber};
+use wiremock::matchers::query_param;
+use wiremock::MockServer;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
@@ -23,6 +24,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
 }
 
 impl TestApp {
@@ -55,7 +57,10 @@ impl TestApp {
     }
     pub async fn get_scam_creators(&self, query_params: &str) -> reqwest::Response {
         reqwest::Client::new()
-            .get(&format!("{}/scam/creators/list?{}", &self.address, query_params))
+            .get(&format!(
+                "{}/scam/creators/list?{}",
+                &self.address, query_params
+            ))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -66,11 +71,14 @@ impl TestApp {
 // basically going to run this test like it was a real user:
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
+    let email_server = MockServer::start().await;
+
     // Randomise configuration to ensure test isolation
     let configuration = {
         let mut c = get_configuration().expect("Failed to read configuration.");
         c.database.database_name = Uuid::new_v4().to_string();
         c.application.port = 0;
+        c.email_client.base_url = email_server.uri();
         c
     };
     configure_database(&configuration.database).await;
@@ -82,6 +90,7 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address,
         db_pool: get_connection_pool(&configuration.database),
+        email_server,
     }
 }
 
