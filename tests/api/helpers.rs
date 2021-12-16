@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
+use wiremock::matchers::query_param;
 use whale_watcher_server::configuration::{get_configuration, DatabaseSettings};
 use whale_watcher_server::email_client::EmailClient;
 use whale_watcher_server::startup::{get_connection_pool, Application};
@@ -39,6 +40,22 @@ impl TestApp {
             .post(&format!("{}/holders", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+    pub async fn post_scam_creators(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/scam/creators", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+    pub async fn get_scam_creators(&self, query_params: &str) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(&format!("{}/scam/creators/list?{}", &self.address, query_params))
             .send()
             .await
             .expect("Failed to execute request.")
