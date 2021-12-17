@@ -39,15 +39,18 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
     let response_get = app.get_scam_creators(&query_params).await;
     assert_eq!(200, response_get.status().as_u16());
 
-    let response_get = response_get.json::<ScammerResponse>().await;
-    let data = response_get.unwrap();
-    assert_eq!(data.data[0].address, ADDRESS);
-    assert_eq!(data.data[0].notes, NOTES);
+    let response_parsed = response_get.json::<ScammerResponse>().await;
+    let parsed = response_parsed.unwrap();
+    assert_eq!(parsed.data[0].address, ADDRESS);
+    assert_eq!(parsed.data[0].notes, NOTES);
     assert_eq!(
-        data.data[0].network_of_scammed_token,
+        parsed.data[0].network_of_scammed_token,
         NETWORK_OF_SCAMMED_TOKEN
     );
-    assert_eq!(data.data[0].scammed_contract_address, SCAMMED_TOKEN_ADDRESS);
+    assert_eq!(
+        parsed.data[0].scammed_contract_address,
+        SCAMMED_TOKEN_ADDRESS
+    );
 }
 
 #[actix_rt::test]
