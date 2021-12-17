@@ -3,7 +3,7 @@ use reqwest::Client;
 
 pub struct EmailClient {
     http_client: Client,
-    base_url: reqwest::Url,
+    base_url: String,
     sender: Email,
     authorization_token: String,
 }
@@ -28,7 +28,7 @@ impl EmailClient {
         let http_client = Client::builder().timeout(timeout).build().unwrap();
         Self {
             http_client,
-            base_url: reqwest::Url::parse(&base_url).unwrap(),
+            base_url,
             sender,
             authorization_token,
         }
@@ -40,7 +40,7 @@ impl EmailClient {
         html_content: &str,
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
-        let url = self.base_url.join("/email").unwrap();
+        let url = format!("{}/email", self.base_url);
         let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
             to: recipient.as_ref(),
@@ -50,10 +50,9 @@ impl EmailClient {
         };
         //build
         self.http_client
-            .post(url.as_str())
+            .post(&url)
             .header("X-Postmark-Server-Token", &self.authorization_token)
             .json(&request_body)
-            //send
             .send()
             .await?
             .error_for_status()?;

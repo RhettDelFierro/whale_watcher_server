@@ -96,22 +96,34 @@ pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> H
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
     if insert_network(&pool, &holder_total.network).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+        return HttpResponse::InternalServerError().finish();
     }
-    if insert_token_name(&pool, &holder_total.token_name).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+    if insert_token_name(&pool, &holder_total.token_name)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
     }
-    if insert_token_name(&pool, &holder_total.token_name).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+    if insert_token_name(&pool, &holder_total.token_name)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
     }
-    if insert_address(&pool, &holder_total.network, &holder_total.contract_address).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+    if insert_address(&pool, &holder_total.network, &holder_total.contract_address)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
     }
-    if insert_address(&pool, &holder_total.network, &holder_total.holder_address).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+    if insert_address(&pool, &holder_total.network, &holder_total.holder_address)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
     }
     if insert_holder_totals(&pool, &holder_total).await.is_err() {
-        return HttpResponse::InternalServerError().finish()
+        return HttpResponse::InternalServerError().finish();
     }
     HttpResponse::Ok().finish()
 }
