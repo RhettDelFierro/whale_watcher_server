@@ -9,12 +9,12 @@ async fn holders_returns_a_200_for_validform_data() {
 
     assert_eq!(200, response.status().as_u16());
 
-    let saved = sqlx::query!("SELECT address FROM addresses",)
+    let saved = sqlx::query!("SELECT holder_address FROM holder_totals",)
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(saved.address, "0x044727e50ff30db57fad06ff4f5846eab5ea52a2");
+    assert_eq!(saved.holder_address, "0x53084957562b692ea99beec870c12e7b8fb2d28e");
 }
 
 #[actix_rt::test]
