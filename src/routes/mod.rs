@@ -3,12 +3,14 @@ mod holders;
 mod scam_creators;
 mod scam_tokens;
 mod subscriptions;
+mod subscriptions_confirm;
 
 pub use health_check::*;
 pub use holders::*;
 pub use scam_creators::*;
 pub use scam_tokens::*;
 pub use subscriptions::*;
+pub use subscriptions_confirm::*;
 
 use crate::domain::{Address, HolderTotal, Network, TokenName};
 use sqlx::PgPool;
