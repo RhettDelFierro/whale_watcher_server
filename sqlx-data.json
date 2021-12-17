@@ -15,6 +15,21 @@
       "nullable": []
     }
   },
+  "427377ad644d5a0aa6de5a10dcdaf6187b581c75dea771cb715fe04025d02670": {
+    "query": "\n            INSERT INTO subscriptions (id, email, name, subscribed_at, status) \n            VALUES ($1, $2, $3, $4, 'pending_confirmation')\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Timestamptz"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "52f7dcd8539cbcda21c79ff4461fc0ddbd2fcf42278beb7bca0fcc0508a5fe23": {
     "query": "\n        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;\n        ",
     "describe": {
@@ -22,6 +37,18 @@
       "parameters": {
         "Left": [
           "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "5e975283de3ef273f138ae1d7d9eaf97d1b3f074c07d483a7b7ea40cbac96549": {
+    "query": "\n            UPDATE subscriptions SET status = 'confirmed' WHERE id = $1\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
         ]
       },
       "nullable": []
@@ -37,6 +64,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "6d977777c3b153de76486f193e9e0d333f91cbe32521bbac12168dafb9e21496": {
+    "query": "\n            SELECT subscriber_id FROM subscription_tokens \n            WHERE subscription_token = $1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "subscriber_id",
+          "type_info": "Uuid"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "76b47ee0a93af7a8fea7e1cd7cf31ca9825897b475ea712c5fa9d5a24d32bdf2": {
@@ -114,6 +161,19 @@
       ]
     }
   },
+  "9ca563dbb06bcd0041ceff538c654dec2441ea0959fa67d4d7bcfeffad442654": {
+    "query": "INSERT INTO subscription_tokens (subscription_token, subscriber_id)\n        VALUES ($1, $2)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Uuid"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "b6b3e87f70f1294f4a4cc9f5dd0a827dc05095d558a0c3c1759ab66562188c93": {
     "query": "\n        SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s\n        INNER JOIN networks n\n            ON s.network_of_scammed_token = n.network_id AND n.network_name = $1\n        WHERE s.address = $2\n        ;\n        ",
     "describe": {
@@ -151,21 +211,6 @@
         false,
         false
       ]
-    }
-  },
-  "ba09b126ddbf3e1f15e1df7fd6576f9dfdd1347874ce318323267cc9704187c7": {
-    "query": "\n        INSERT INTO subscriptions (id, email, name, subscribed_at, status)\n        VALUES ($1, $2, $3, $4, 'confirmed')\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Uuid",
-          "Text",
-          "Text",
-          "Timestamptz"
-        ]
-      },
-      "nullable": []
     }
   },
   "c55342d4abbde9ad6babc3da0fbf79e3fa6bacbe4fd196b13e970c9bd99c4716": {
