@@ -3,7 +3,7 @@ use crate::domain::{Address, Network, Notes, ScamCreator, ScamType};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use std::convert::{TryFrom, TryInto};
 use tracing_futures::Instrument;
 use uuid::Uuid;

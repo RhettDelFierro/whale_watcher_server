@@ -13,18 +13,24 @@ pub use subscriptions::*;
 pub use subscriptions_confirm::*;
 
 use crate::domain::{Address, HolderTotal, Network, TokenName};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use tracing_futures::Instrument;
 
-#[tracing::instrument(name = "Saving new network in the database", skip(network, pool))]
-async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Error> {
+#[tracing::instrument(
+    name = "Saving new network in the database",
+    skip(network, transaction)
+)]
+async fn insert_network(
+    transaction: &mut Transaction<'_, Postgres>,
+    network: &Network,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
         network.as_ref()
     )
-    .execute(pool)
+    .execute(transaction)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
@@ -33,15 +39,21 @@ async fn insert_network(pool: &PgPool, network: &Network) -> Result<(), sqlx::Er
     Ok(())
 }
 
-#[tracing::instrument(name = "Saving new token name in the database", skip(token_name, pool))]
-async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<(), sqlx::Error> {
+#[tracing::instrument(
+    name = "Saving new token name in the database",
+    skip(token_name, transaction)
+)]
+async fn insert_token_name(
+    transaction: &mut Transaction<'_, Postgres>,
+    token_name: &TokenName,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO token_names (token_name) VALUES ($1) ON CONFLICT DO NOTHING;
         "#,
         token_name.as_ref()
     )
-    .execute(pool)
+    .execute(transaction)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
@@ -52,10 +64,10 @@ async fn insert_token_name(pool: &PgPool, token_name: &TokenName) -> Result<(), 
 
 #[tracing::instrument(
     name = "Saving new address in the database",
-    skip(network, address, pool)
+    skip(network, address, transaction)
 )]
 async fn insert_address(
-    pool: &PgPool,
+    transaction: &mut Transaction<'_, Postgres>,
     network: &Network,
     address: &Address,
 ) -> Result<(), sqlx::Error> {
@@ -71,7 +83,7 @@ async fn insert_address(
         network.as_ref(),
         address.as_ref()
     )
-    .execute(pool)
+    .execute(transaction)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);

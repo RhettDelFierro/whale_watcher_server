@@ -3,7 +3,7 @@ use crate::domain::{Address, HolderTotal, Network, TokenName};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use std::convert::{TryFrom, TryInto};
 use tracing_futures::Instrument;
 use uuid::Uuid;
@@ -41,10 +41,10 @@ impl TryFrom<FormData> for HolderTotal {
 
 #[tracing::instrument(
     name = "Saving new holder totals details in the database",
-    skip(pool, holder_total)
+    skip(transaction, holder_total)
 )]
 pub async fn insert_holder_totals(
-    pool: &PgPool,
+    transaction: &mut Transaction<'_, Postgres>,
     holder_total: &HolderTotal,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
@@ -68,7 +68,7 @@ pub async fn insert_holder_totals(
         Utc::now(),
         holder_total.contract_address.as_ref(),
     )
-        .execute(pool)
+        .execute(transaction)
         .await
         .map_err(|e| {
             tracing::error!("Failed to execute query: {:?}", e);
@@ -79,50 +79,71 @@ pub async fn insert_holder_totals(
 
 #[allow(clippy::async_yields_async)]
 #[tracing::instrument(
-name = "Adding a new holder.",
-skip(form, pool),
-fields(
-network = % form.network,
-token_name = % form.token_name,
-contract_address = % form.contract_address,
-holder_address = % form.holder_address,
-place = % form.place,
-amount = % form.amount,
-)
+    name = "Adding a new holder.",
+    skip(form, pool),
+    fields(
+        network = % form.network,
+        token_name = % form.token_name,
+        contract_address = % form.contract_address,
+        holder_address = % form.holder_address,
+        place = % form.place,
+        amount = % form.amount,
+    )
 )]
 pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
     let holder_total: HolderTotal = match form.0.try_into() {
         Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    if insert_network(&pool, &holder_total.network).await.is_err() {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_token_name(&pool, &holder_total.token_name)
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+    if insert_network(&mut transaction, &holder_total.network)
         .await
         .is_err()
     {
         return HttpResponse::InternalServerError().finish();
     }
-    if insert_token_name(&pool, &holder_total.token_name)
+    if insert_token_name(&mut transaction, &holder_total.token_name)
         .await
         .is_err()
     {
         return HttpResponse::InternalServerError().finish();
     }
-    if insert_address(&pool, &holder_total.network, &holder_total.contract_address)
+    if insert_token_name(&mut transaction, &holder_total.token_name)
         .await
         .is_err()
     {
         return HttpResponse::InternalServerError().finish();
     }
-    if insert_address(&pool, &holder_total.network, &holder_total.holder_address)
+    if insert_address(
+        &mut transaction,
+        &holder_total.network,
+        &holder_total.contract_address,
+    )
+    .await
+    .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if insert_address(
+        &mut transaction,
+        &holder_total.network,
+        &holder_total.holder_address,
+    )
+    .await
+    .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if insert_holder_totals(&mut transaction, &holder_total)
         .await
         .is_err()
     {
         return HttpResponse::InternalServerError().finish();
     }
-    if insert_holder_totals(&pool, &holder_total).await.is_err() {
+    if transaction.commit().await.is_err() {
         return HttpResponse::InternalServerError().finish();
     }
     HttpResponse::Ok().finish()
@@ -141,12 +162,12 @@ pub struct HoldersResponse {
 
 #[allow(clippy::async_yields_async)]
 #[tracing::instrument(
-name = "Fetching holders.",
-skip(parameters, pool),
-fields(
-network = % parameters.network,
-contract_address = % parameters.contract_address
-)
+    name = "Fetching holders.",
+    skip(parameters, pool),
+    fields(
+        network = % parameters.network,
+        contract_address = % parameters.contract_address
+    )
 )]
 pub async fn get_holder(
     parameters: web::Query<Parameters>,

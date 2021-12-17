@@ -3,7 +3,7 @@ use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, ScammerQuery
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use std::convert::{TryFrom, TryInto};
 use tracing_futures::Instrument;
 use uuid::Uuid;
@@ -33,7 +33,12 @@ impl TryFrom<FormDataScammers> for ScamCreator {
     }
 }
 
-pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator) -> Result<(), sqlx::Error> {
+#[allow(clippy::async_yields_async)]
+#[tracing::instrument(name = "Inserting a scammer.", skip(transaction, scammer))]
+pub async fn insert_scammer(
+    transaction: &mut Transaction<'_, Postgres>,
+    scammer: &ScamCreator,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)
@@ -49,7 +54,7 @@ pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator) -> Result<(), 
         scammer.network_of_scammed_token.as_ref(),
         scammer.scammed_contract_address.as_ref(),
     )
-        .execute(pool)
+        .execute(transaction)
         .await
         .map_err(|e| {
             tracing::error!("Failed to execute query: {:?}", e);
@@ -58,6 +63,16 @@ pub async fn insert_scammer(pool: &PgPool, scammer: &ScamCreator) -> Result<(), 
     Ok(())
 }
 
+#[allow(clippy::async_yields_async)]
+#[tracing::instrument(
+    name = "Adding a new scammmer.",
+    skip(form, pool),
+    fields(
+        address = %form.address,
+        network_of_scammed_token = %form.network_of_scammed_token,
+        scammed_contract_address = %form.scammed_contract_address
+    )
+)]
 pub async fn register_scammer(
     form: web::Form<FormDataScammers>,
     pool: web::Data<PgPool>,
@@ -66,33 +81,46 @@ pub async fn register_scammer(
         Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-    match insert_network(&pool, &scam_creator.network_of_scammed_token).await {
-        Ok(_) => {
-            match insert_address(
-                &pool,
-                &scam_creator.network_of_scammed_token,
-                &scam_creator.address,
-            )
-            .await
-            {
-                Ok(_) => match insert_address(
-                    &pool,
-                    &scam_creator.network_of_scammed_token,
-                    &scam_creator.scammed_contract_address,
-                )
-                .await
-                {
-                    Ok(_) => match insert_scammer(&pool, &scam_creator).await {
-                        Ok(_) => HttpResponse::Ok().finish(),
-                        Err(_) => HttpResponse::InternalServerError().finish(),
-                    },
-                    Err(_) => HttpResponse::InternalServerError().finish(),
-                },
-                Err(_) => HttpResponse::InternalServerError().finish(),
-            }
-        }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+    if insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
     }
+    if insert_address(
+        &mut transaction,
+        &scam_creator.network_of_scammed_token,
+        &scam_creator.address,
+    )
+    .await
+    .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if insert_address(
+        &mut transaction,
+        &scam_creator.network_of_scammed_token,
+        &scam_creator.scammed_contract_address,
+    )
+    .await
+    .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if insert_scammer(&mut transaction, &scam_creator)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if transaction.commit().await.is_err() {
+        return HttpResponse::InternalServerError().finish();
+    }
+    HttpResponse::Ok().finish()
 }
 
 #[derive(serde::Deserialize)]
@@ -119,6 +147,15 @@ pub struct ScamTokenResponse {
     pub data: Vec<FormDataScammers>,
 }
 
+#[allow(clippy::async_yields_async)]
+#[tracing::instrument(
+    name = "Getting a scammmer.",
+    skip(pool, parameters),
+    fields(
+        network = %parameters.network,
+        scammer_address = %parameters.scammer_address
+    )
+)]
 pub async fn get_scammers(
     parameters: web::Query<ScammerParameters>,
     pool: web::Data<PgPool>,
