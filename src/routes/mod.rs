@@ -1,5 +1,6 @@
 mod health_check;
 mod holders;
+mod legit_token_creator;
 mod scam_creators;
 mod scam_tokens;
 mod subscriptions;
@@ -7,6 +8,7 @@ mod subscriptions_confirm;
 
 pub use health_check::*;
 pub use holders::*;
+pub use legit_token_creator::*;
 pub use scam_creators::*;
 pub use scam_tokens::*;
 pub use subscriptions::*;
