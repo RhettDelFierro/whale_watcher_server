@@ -71,6 +71,25 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+    pub async fn post_legit_token_creators(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/legit/creators", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+    pub async fn get_legit_token_creators(&self, query_params: &str) -> reqwest::Response {
+        reqwest::Client::new()
+            .get(&format!(
+                "{}/legit/creators/list?{}",
+                &self.address, query_params
+            ))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
     pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
         let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
         // Helper function that extracts the link from one of the request fields.

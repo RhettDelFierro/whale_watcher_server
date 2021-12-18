@@ -126,7 +126,7 @@ pub async fn register_scammer(
 #[derive(serde::Deserialize)]
 pub struct ScammerParameters {
     network: String,
-    scammer_address: String,
+    token_creator_address: String,
 }
 
 impl TryFrom<ScammerParameters> for TokenCreatorQuery {
@@ -134,10 +134,10 @@ impl TryFrom<ScammerParameters> for TokenCreatorQuery {
 
     fn try_from(value: ScammerParameters) -> Result<Self, Self::Error> {
         let network = Network::parse(value.network)?;
-        let scammer_address = Address::parse(value.scammer_address)?;
+        let token_creator_address = Address::parse(value.token_creator_address)?;
         Ok(Self {
             network,
-            token_creator_address: scammer_address,
+            token_creator_address,
         })
     }
 }
@@ -153,7 +153,7 @@ pub struct ScamTokenCreatorResponse {
     skip(pool, parameters),
     fields(
         network = %parameters.network,
-        scammer_address = %parameters.scammer_address
+        token_creator_address = %parameters.token_creator_address
     )
 )]
 pub async fn get_scammers(

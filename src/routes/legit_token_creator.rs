@@ -1,5 +1,5 @@
 use super::{insert_address, insert_network};
-use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, TokenCreatorQuery};
+use crate::domain::{Address, LegitTokenCreator, Network, Notes, ScamType, TokenCreatorQuery};
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -12,36 +12,39 @@ use uuid::Uuid;
 pub struct FormDataLegitTokenCreator {
     address: String,
     notes: Option<String>,
-    network_of_scammed_token: String,
-    scammed_contract_address: String,
+    network_of_legit_token: String,
+    legit_contract_address: String,
 }
 
-impl TryFrom<FormDataLegitTokenCreator> for ScamCreator {
+impl TryFrom<FormDataLegitTokenCreator> for LegitTokenCreator {
     type Error = String;
 
     fn try_from(value: FormDataLegitTokenCreator) -> Result<Self, Self::Error> {
         let address = Address::parse(value.address)?;
         let notes = Notes::parse(value.notes)?;
-        let network_of_scammed_token = Network::parse(value.network_of_scammed_token)?;
-        let scammed_contract_address = Address::parse(value.scammed_contract_address)?;
+        let network_of_legit_token = Network::parse(value.network_of_legit_token)?;
+        let legit_contract_address = Address::parse(value.legit_contract_address)?;
         Ok(Self {
             address,
             notes,
-            network_of_scammed_token,
-            scammed_contract_address,
+            network_of_legit_token,
+            legit_contract_address,
         })
     }
 }
 
 #[allow(clippy::async_yields_async)]
-#[tracing::instrument(name = "Inserting a scammer.", skip(transaction, scammer))]
-pub async fn insert_scammer(
+#[tracing::instrument(
+    name = "Inserting a legit token creator.",
+    skip(transaction, legit_token_creator)
+)]
+pub async fn insert_legit_token_creator(
     transaction: &mut Transaction<'_, Postgres>,
-    scammer: &ScamCreator,
+    legit_token_creator: &LegitTokenCreator,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
-        INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)
+        INSERT INTO legit_token_creators (address, notes, network_of_legit_token, legit_contract_address)
         VALUES (
             $1,
             $2,
@@ -49,10 +52,10 @@ pub async fn insert_scammer(
             $4
         );
         "#,
-        scammer.address.as_ref(),
-        scammer.notes.as_ref(),
-        scammer.network_of_scammed_token.as_ref(),
-        scammer.scammed_contract_address.as_ref(),
+        legit_token_creator.address.as_ref(),
+        legit_token_creator.notes.as_ref(),
+        legit_token_creator.network_of_legit_token.as_ref(),
+        legit_token_creator.legit_contract_address.as_ref(),
     )
         .execute(transaction)
         .await
@@ -65,19 +68,19 @@ pub async fn insert_scammer(
 
 #[allow(clippy::async_yields_async)]
 #[tracing::instrument(
-name = "Adding a new scammmer.",
+name = "Adding a new legit token creator.",
 skip(form, pool),
 fields(
 address = %form.address,
-network_of_scammed_token = %form.network_of_scammed_token,
-scammed_contract_address = %form.scammed_contract_address
+network_of_legit_token = %form.network_of_legit_token,
+legit_contract_address = %form.legit_contract_address
 )
 )]
-pub async fn register_scammer(
+pub async fn register_legit_token_creator(
     form: web::Form<FormDataLegitTokenCreator>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let scam_creator: ScamCreator = match form.0.try_into() {
+    let legit_token_creator: LegitTokenCreator = match form.0.try_into() {
         Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
@@ -85,16 +88,9 @@ pub async fn register_scammer(
         Ok(transaction) => transaction,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
-    if insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
-        .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_address(
+    if insert_network(
         &mut transaction,
-        &scam_creator.network_of_scammed_token,
-        &scam_creator.address,
+        &legit_token_creator.network_of_legit_token,
     )
     .await
     .is_err()
@@ -103,15 +99,25 @@ pub async fn register_scammer(
     }
     if insert_address(
         &mut transaction,
-        &scam_creator.network_of_scammed_token,
-        &scam_creator.scammed_contract_address,
+        &legit_token_creator.network_of_legit_token,
+        &legit_token_creator.address,
     )
     .await
     .is_err()
     {
         return HttpResponse::InternalServerError().finish();
     }
-    if insert_scammer(&mut transaction, &scam_creator)
+    if insert_address(
+        &mut transaction,
+        &legit_token_creator.network_of_legit_token,
+        &legit_token_creator.legit_contract_address,
+    )
+    .await
+    .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    if insert_legit_token_creator(&mut transaction, &legit_token_creator)
         .await
         .is_err()
     {
@@ -124,73 +130,73 @@ pub async fn register_scammer(
 }
 
 #[derive(serde::Deserialize)]
-pub struct ScammerParameters {
+pub struct LegitTokenCreatorParameters {
     network: String,
-    scammer_address: String,
+    token_creator_address: String,
 }
 
-impl TryFrom<ScammerParameters> for TokenCreatorQuery {
+impl TryFrom<LegitTokenCreatorParameters> for TokenCreatorQuery {
     type Error = String;
 
-    fn try_from(value: ScammerParameters) -> Result<Self, Self::Error> {
+    fn try_from(value: LegitTokenCreatorParameters) -> Result<Self, Self::Error> {
         let network = Network::parse(value.network)?;
-        let scammer_address = Address::parse(value.scammer_address)?;
+        let token_creator_address = Address::parse(value.token_creator_address)?;
         Ok(Self {
             network,
-            token_creator_address: scammer_address,
+            token_creator_address,
         })
     }
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct ScamTokenCreatorResponse {
+pub struct LegitTokenCreatorResponse {
     pub data: Vec<FormDataLegitTokenCreator>,
 }
 
 #[allow(clippy::async_yields_async)]
 #[tracing::instrument(
-name = "Getting a scammmer.",
+name = "Getting a legit token creator.",
 skip(pool, parameters),
 fields(
 network = %parameters.network,
-scammer_address = %parameters.scammer_address
+token_creator_address = %parameters.token_creator_address
 )
 )]
-pub async fn get_scammers(
-    parameters: web::Query<ScammerParameters>,
+pub async fn get_legit_token_creators(
+    parameters: web::Query<LegitTokenCreatorParameters>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let scammer_query: TokenCreatorQuery = match parameters.0.try_into() {
+    let token_creator_query: TokenCreatorQuery = match parameters.0.try_into() {
         Ok(form) => form,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
     match sqlx::query!(
         r#"
-        SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s
+        SELECT l.address, l.notes, n.network_name, l.legit_contract_address FROM legit_token_creators l
         INNER JOIN networks n
-            ON s.network_of_scammed_token = n.network_id AND n.network_name = $1
-        WHERE s.address = $2
+            ON l.network_of_legit_token = n.network_id AND n.network_name = $1
+        WHERE l.address = $2
         ;
         "#,
-        scammer_query.network.as_ref(),
-        scammer_query.token_creator_address.as_ref(),
+        token_creator_query.network.as_ref(),
+        token_creator_query.token_creator_address.as_ref(),
     )
         .fetch_all(pool.get_ref())
         .await {
         Ok(rows) => {
-            let mut scammers = ScamTokenCreatorResponse {
+            let mut legit_token_creators = LegitTokenCreatorResponse {
                 data: vec![]
             };
             for row in rows {
-                let scammer = FormDataLegitTokenCreator {
+                let legit_token_creator = FormDataLegitTokenCreator {
                     address: row.address,
                     notes: row.notes,
-                    network_of_scammed_token: row.network_name,
-                    scammed_contract_address: row.scammed_contract_address
+                    network_of_legit_token: row.network_name,
+                    legit_contract_address: row.legit_contract_address
                 };
-                scammers.data.push(scammer);
+                legit_token_creators.data.push(legit_token_creator);
             };
-            HttpResponse::Ok().json(scammers)
+            HttpResponse::Ok().json(legit_token_creators)
         }
         Err(e) => {
             HttpResponse::InternalServerError().finish()

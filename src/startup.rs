@@ -2,8 +2,8 @@ use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::{
-    add_holder, confirm, get_holder, get_scammers, health_check, register_scam_token,
-    register_scammer, subscribe,
+    add_holder, confirm, get_holder, get_legit_token_creators, get_scammers, health_check,
+    register_legit_token_creator, register_scam_token, register_scammer, subscribe,
 };
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
@@ -78,6 +78,14 @@ pub fn run(
             .route("/health_check", web::get().to(health_check))
             .route("/holders", web::post().to(add_holder))
             .route("/holders/list", web::get().to(get_holder))
+            .route(
+                "/legit/creators",
+                web::post().to(register_legit_token_creator),
+            )
+            .route(
+                "/legit/creators/list",
+                web::get().to(get_legit_token_creators),
+            )
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
             .route("/scam/creators", web::post().to(register_scammer))
