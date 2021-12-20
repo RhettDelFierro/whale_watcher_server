@@ -27,10 +27,7 @@ async fn register_scammer_returns_a_200_for_valid_form_data() {
         "address={}&notes={}&network_of_scammed_token={}&scammed_contract_address={}",
         ADDRESS, NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
     );
-    let query_params = format!(
-        "network={}&token_creator_address={}",
-        NETWORK_OF_SCAMMED_TOKEN, ADDRESS,
-    );
+    let query_params = format!("token_creator_address={}", ADDRESS,);
     // Act
     let response_post = app.post_scam_creators(body.into()).await;
 

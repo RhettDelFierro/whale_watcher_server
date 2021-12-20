@@ -45,45 +45,6 @@
       "nullable": []
     }
   },
-  "4ab510d8c4b920c26f0a0c6ba4c8c531a8e32d4a26e9066a62fbe2c8888fc8c7": {
-    "query": "\n        SELECT l.address, l.notes, n.network_name, l.legit_contract_address FROM legit_token_creators l\n        INNER JOIN networks n\n            ON l.network_of_legit_token = n.network_id AND n.network_name = $1\n        WHERE l.address = $2\n        ;\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "address",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "notes",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "network_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "legit_contract_address",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        true,
-        false,
-        false
-      ]
-    }
-  },
   "52f7dcd8539cbcda21c79ff4461fc0ddbd2fcf42278beb7bca0fcc0508a5fe23": {
     "query": "\n        INSERT INTO networks (network_name) VALUES ($1) ON CONFLICT DO NOTHING;\n        ",
     "describe": {
@@ -136,6 +97,44 @@
         ]
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "70c5b51b59d62c35f948fa51eac67b94604facc9953ee624035a6c6fe78fbbc0": {
+    "query": "\n        SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s\n        INNER JOIN networks n\n            ON s.network_of_scammed_token = n.network_id\n        WHERE s.address = $1\n        ;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "notes",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "network_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "scammed_contract_address",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        true,
+        false,
         false
       ]
     }
@@ -228,8 +227,8 @@
       "nullable": []
     }
   },
-  "b6b3e87f70f1294f4a4cc9f5dd0a827dc05095d558a0c3c1759ab66562188c93": {
-    "query": "\n        SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s\n        INNER JOIN networks n\n            ON s.network_of_scammed_token = n.network_id AND n.network_name = $1\n        WHERE s.address = $2\n        ;\n        ",
+  "a73e6f88ce60244358d0e6e71b1c6dfaf7a76310086535b2ed3029b9d7409774": {
+    "query": "\n        SELECT l.address, l.notes, n.network_name, l.legit_contract_address FROM legit_token_creators l\n        INNER JOIN networks n\n            ON l.network_of_legit_token = n.network_id\n        WHERE l.address = $1\n        ;\n        ",
     "describe": {
       "columns": [
         {
@@ -249,13 +248,12 @@
         },
         {
           "ordinal": 3,
-          "name": "scammed_contract_address",
+          "name": "legit_contract_address",
           "type_info": "Text"
         }
       ],
       "parameters": {
         "Left": [
-          "Text",
           "Text"
         ]
       },

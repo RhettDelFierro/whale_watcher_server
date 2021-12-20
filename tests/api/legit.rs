@@ -27,10 +27,7 @@ async fn register_legit_token_creator_returns_a_200_for_valid_form_data() {
         "address={}&notes={}&network_of_legit_token={}&legit_contract_address={}",
         ADDRESS, NOTES, NETWORK_OF_LEGIT_TOKEN, LEGIT_TOKEN_CONTRACT_ADDRESS
     );
-    let query_params = format!(
-        "network={}&token_creator_address={}",
-        NETWORK_OF_LEGIT_TOKEN, ADDRESS,
-    );
+    let query_params = format!("token_creator_address={}", ADDRESS,);
     // Act
     let response_post = app.post_legit_token_creators(body.into()).await;
 

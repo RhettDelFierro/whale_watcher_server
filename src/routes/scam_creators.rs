@@ -125,7 +125,6 @@ pub async fn register_scammer(
 
 #[derive(serde::Deserialize)]
 pub struct ScammerParameters {
-    network: String,
     token_creator_address: String,
 }
 
@@ -133,10 +132,8 @@ impl TryFrom<ScammerParameters> for TokenCreatorQuery {
     type Error = String;
 
     fn try_from(value: ScammerParameters) -> Result<Self, Self::Error> {
-        let network = Network::parse(value.network)?;
         let token_creator_address = Address::parse(value.token_creator_address)?;
         Ok(Self {
-            network,
             token_creator_address,
         })
     }
@@ -152,7 +149,6 @@ pub struct ScamTokenCreatorResponse {
     name = "Getting a scammmer.",
     skip(pool, parameters),
     fields(
-        network = %parameters.network,
         token_creator_address = %parameters.token_creator_address
     )
 )]
@@ -168,11 +164,10 @@ pub async fn get_scammers(
         r#"
         SELECT s.address, s.notes, n.network_name, s.scammed_contract_address FROM scam_token_creators s
         INNER JOIN networks n
-            ON s.network_of_scammed_token = n.network_id AND n.network_name = $1
-        WHERE s.address = $2
+            ON s.network_of_scammed_token = n.network_id
+        WHERE s.address = $1
         ;
         "#,
-        scammer_query.network.as_ref(),
         scammer_query.token_creator_address.as_ref(),
     )
         .fetch_all(pool.get_ref())

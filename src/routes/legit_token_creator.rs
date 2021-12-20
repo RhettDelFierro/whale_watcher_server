@@ -131,7 +131,6 @@ pub async fn register_legit_token_creator(
 
 #[derive(serde::Deserialize)]
 pub struct LegitTokenCreatorParameters {
-    network: String,
     token_creator_address: String,
 }
 
@@ -139,10 +138,8 @@ impl TryFrom<LegitTokenCreatorParameters> for TokenCreatorQuery {
     type Error = String;
 
     fn try_from(value: LegitTokenCreatorParameters) -> Result<Self, Self::Error> {
-        let network = Network::parse(value.network)?;
         let token_creator_address = Address::parse(value.token_creator_address)?;
         Ok(Self {
-            network,
             token_creator_address,
         })
     }
@@ -158,7 +155,6 @@ pub struct LegitTokenCreatorResponse {
 name = "Getting a legit token creator.",
 skip(pool, parameters),
 fields(
-network = %parameters.network,
 token_creator_address = %parameters.token_creator_address
 )
 )]
@@ -174,11 +170,10 @@ pub async fn get_legit_token_creators(
         r#"
         SELECT l.address, l.notes, n.network_name, l.legit_contract_address FROM legit_token_creators l
         INNER JOIN networks n
-            ON l.network_of_legit_token = n.network_id AND n.network_name = $1
-        WHERE l.address = $2
+            ON l.network_of_legit_token = n.network_id
+        WHERE l.address = $1
         ;
         "#,
-        token_creator_query.network.as_ref(),
         token_creator_query.token_creator_address.as_ref(),
     )
         .fetch_all(pool.get_ref())
