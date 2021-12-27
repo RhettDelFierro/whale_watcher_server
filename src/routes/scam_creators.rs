@@ -1,5 +1,6 @@
 use super::{insert_address, insert_network};
 use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, TokenCreatorQuery};
+use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -121,6 +122,19 @@ pub async fn register_scammer(
         return HttpResponse::InternalServerError().finish();
     }
     HttpResponse::Ok().finish()
+}
+
+#[derive(Debug)]
+pub struct StoreScamCreatorError(sqlx::Error);
+impl ResponseError for StoreScamCreatorError {}
+impl std::fmt::Display for StoreScamCreatorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "A database error was encountered while \
+            trying to store a this scam creator."
+        )
+    }
 }
 
 #[derive(serde::Deserialize)]

@@ -1,5 +1,6 @@
 use super::{insert_address, insert_network};
 use crate::domain::{Address, LegitTokenCreator, Network, Notes, ScamType, TokenCreatorQuery};
+use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -127,6 +128,19 @@ pub async fn register_legit_token_creator(
         return HttpResponse::InternalServerError().finish();
     }
     HttpResponse::Ok().finish()
+}
+
+#[derive(Debug)]
+pub struct StoreLegitTokenCreatorError(sqlx::Error);
+impl ResponseError for StoreLegitTokenCreatorError {}
+impl std::fmt::Display for StoreLegitTokenCreatorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "A database error was encountered while \
+            trying to store a this legit token creator."
+        )
+    }
 }
 
 #[derive(serde::Deserialize)]

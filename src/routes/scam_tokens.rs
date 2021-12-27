@@ -1,5 +1,6 @@
 use super::{insert_address, insert_network};
 use crate::domain::{Address, Network, Notes, ScamCreator, ScamType};
+use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;

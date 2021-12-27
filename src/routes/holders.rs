@@ -1,5 +1,6 @@
 use super::{insert_address, insert_network, insert_token_name};
 use crate::domain::{Address, HolderTotal, Network, TokenName};
+use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
@@ -147,6 +148,18 @@ pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> H
         return HttpResponse::InternalServerError().finish();
     }
     HttpResponse::Ok().finish()
+}
+#[derive(Debug)]
+pub struct StoreHolderTotalError(sqlx::Error);
+impl ResponseError for StoreHolderTotalError {}
+impl std::fmt::Display for StoreHolderTotalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "A database error was encountered while \
+            trying to store a this holder."
+        )
+    }
 }
 
 #[derive(serde::Deserialize)]
