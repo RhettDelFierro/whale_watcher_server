@@ -30,8 +30,8 @@
       "nullable": []
     }
   },
-  "427377ad644d5a0aa6de5a10dcdaf6187b581c75dea771cb715fe04025d02670": {
-    "query": "\n            INSERT INTO subscriptions (id, email, name, subscribed_at, status) \n            VALUES ($1, $2, $3, $4, 'pending_confirmation')\n        ",
+  "51c9c995452d3359e3da7e2f2ff8a6e68690f740a36d2a32ec7c40b08931ebdb": {
+    "query": "\n    INSERT INTO subscriptions (id, email, name, subscribed_at, status)\n    VALUES ($1, $2, $3, $4, 'pending_confirmation')\n            ",
     "describe": {
       "columns": [],
       "parameters": {
@@ -139,6 +139,19 @@
       ]
     }
   },
+  "753c8ecfac0ea7d052e60cb582e3b3ebac5e50eb133152712ca18ab5d5e202f3": {
+    "query": "\n    INSERT INTO subscription_tokens (subscription_token, subscriber_id)\n    VALUES ($1, $2)\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Uuid"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "76b47ee0a93af7a8fea7e1cd7cf31ca9825897b475ea712c5fa9d5a24d32bdf2": {
     "query": "\n        SELECT h.*, t.token_name, n.network_name FROM holder_totals h\n        INNER JOIN token_names t\n            ON h.token_name_id = t.token_name_id\n        INNER JOIN addresses a\n            ON a.address = h.holder_address AND a.network_id = h.network_id AND h.contract_address = $2\n        INNER JOIN networks n\n            ON n.network_id = h.network_id AND n.network_name = $1\n        ORDER BY h.checked_on ASC;\n        ;\n        ",
     "describe": {
@@ -212,19 +225,6 @@
         false,
         false
       ]
-    }
-  },
-  "9ca563dbb06bcd0041ceff538c654dec2441ea0959fa67d4d7bcfeffad442654": {
-    "query": "INSERT INTO subscription_tokens (subscription_token, subscriber_id)\n        VALUES ($1, $2)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Uuid"
-        ]
-      },
-      "nullable": []
     }
   },
   "a73e6f88ce60244358d0e6e71b1c6dfaf7a76310086535b2ed3029b9d7409774": {
