@@ -1,7 +1,8 @@
-use super::{insert_address, insert_network, insert_token_name};
+use super::{insert_address, insert_network, insert_token_name, BlockchainAppError};
 use crate::domain::{Address, HolderTotal, Network, TokenName};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::{PgPool, Postgres, Transaction};
@@ -92,32 +93,25 @@ pub async fn insert_holder_totals(
     )
 )]
 pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let holder_total: HolderTotal = match form.0.try_into() {
-        Ok(form) => form,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let mut transaction = match pool.begin().await {
-        Ok(transaction) => transaction,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    if insert_network(&mut transaction, &holder_total.network)
+    let holder_total: HolderTotal = form
+        .0
+        .try_into()
+        .map_err(BlockchainAppError::ValidationError)?;
+    let mut transaction = pool
+        .begin()
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_token_name(&mut transaction, &holder_total.token_name)
+        .context("Failed to acquire a Postgres connection from the pool")?;
+
+    insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_token_name(&mut transaction, &holder_total.token_name)
+        .context("Failed to insert network in the database.")?;
+    insert_token_name(&mut transaction, &holder_total.token_name)
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
+        .context(format!(
+            "Failed to insert token name {}",
+            &holder_total.token_name.as_ref()
+        ))?;
+
     if insert_address(
         &mut transaction,
         &holder_total.network,

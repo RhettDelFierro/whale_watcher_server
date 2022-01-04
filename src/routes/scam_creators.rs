@@ -1,7 +1,8 @@
-use super::{insert_address, insert_network};
+use super::{insert_address, insert_network, BlockchainAppError};
 use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, TokenCreatorQuery};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::{PgPool, Postgres, Transaction};
@@ -78,49 +79,51 @@ pub async fn register_scammer(
     form: web::Form<FormDataScammers>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let scam_creator: ScamCreator = match form.0.try_into() {
-        Ok(form) => form,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let mut transaction = match pool.begin().await {
-        Ok(transaction) => transaction,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    if insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
+    let scam_creator: ScamCreator = form
+        .0
+        .try_into()
+        .map_err(BlockchainAppError::ValidationError)?;
+    let mut transaction = pool
+        .begin()
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_address(
+        .context("Failed to acquire a Postgres connection from the pool")?;
+    insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
+        .await
+        .context("Failed to insert network in the database.")?;
+
+    insert_address(
         &mut transaction,
         &scam_creator.network_of_scammed_token,
         &scam_creator.address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_address(
+    .context(format!(
+        "Failed to insert new scammer's address {} in the database.",
+        &scam_creator.address.as_ref()
+    ))?;
+
+    insert_address(
         &mut transaction,
         &scam_creator.network_of_scammed_token,
         &scam_creator.scammed_contract_address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_scammer(&mut transaction, &scam_creator)
+    .context(format!(
+        "Failed to insert scammed contract address {} in the database.",
+        &scam_creator.scammed_contract_address.as_ref()
+    ))?;
+
+    insert_scammer(&mut transaction, &scam_creator)
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if transaction.commit().await.is_err() {
-        return HttpResponse::InternalServerError().finish();
-    }
+        .context(format!(
+            "Failed to insert scammer {} with contract address {} in the database.",
+            &scam_creator.address.as_ref(),
+            &scam_creator.scammed_contract_address.as_ref()
+        ))?;
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store a scammer.")?;
     HttpResponse::Ok().finish()
 }
 

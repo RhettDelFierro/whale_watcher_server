@@ -15,6 +15,8 @@ pub use subscriptions::*;
 pub use subscriptions_confirm::*;
 
 use crate::domain::{Address, HolderTotal, Network, TokenName};
+use actix_web::http::StatusCode;
+use actix_web::{web, HttpResponse, ResponseError};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing_futures::Instrument;
 
@@ -34,10 +36,7 @@ async fn insert_network(
     )
     .execute(transaction)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .map_err(|e| e)?;
     Ok(())
 }
 
@@ -57,10 +56,7 @@ async fn insert_token_name(
     )
     .execute(transaction)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .map_err(|e| e)?;
     Ok(())
 }
 
@@ -87,9 +83,42 @@ async fn insert_address(
     )
     .execute(transaction)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .map_err(|e| e)?;
+    Ok(())
+}
+
+#[derive(thiserror::Error)]
+pub enum BlockchainAppError {
+    #[error("{0}")]
+    ValidationError(String),
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl std::fmt::Debug for BlockchainAppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl ResponseError for BlockchainAppError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            BlockchainAppError::ValidationError(_) => StatusCode::BAD_REQUEST,
+            BlockchainAppError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+pub fn error_chain_fmt(
+    e: &impl std::error::Error,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    writeln!(f, "{}\n", e)?;
+    let mut current = e.source();
+    while let Some(cause) = current {
+        writeln!(f, "Caused by:\n\t{}", cause)?;
+        current = cause.source();
+    }
     Ok(())
 }

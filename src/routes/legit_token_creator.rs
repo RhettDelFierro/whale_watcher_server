@@ -1,7 +1,8 @@
-use super::{insert_address, insert_network};
+use super::{insert_address, insert_network, BlockchainAppError};
 use crate::domain::{Address, LegitTokenCreator, Network, Notes, ScamType, TokenCreatorQuery};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::{PgPool, Postgres, Transaction};
@@ -81,23 +82,19 @@ pub async fn register_legit_token_creator(
     form: web::Form<FormDataLegitTokenCreator>,
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    let legit_token_creator: LegitTokenCreator = match form.0.try_into() {
-        Ok(form) => form,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-    let mut transaction = match pool.begin().await {
-        Ok(transaction) => transaction,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    if insert_network(
-        &mut transaction,
-        &legit_token_creator.network_of_legit_token,
-    )
-    .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
+    let legit_token_creator: LegitTokenCreator = form
+        .0
+        .try_into()
+        .map_err(BlockchainAppError::ValidationError)?;
+    let mut transaction = pool
+        .begin()
+        .await
+        .context("Failed to acquire a Postgres connection from the pool")?;
+
+    insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
+        .await
+        .context("Failed to insert network in the database.")?;
+
     if insert_address(
         &mut transaction,
         &legit_token_creator.network_of_legit_token,

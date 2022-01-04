@@ -132,3 +132,20 @@ async fn register_scammer_returns_a_400_when_fields_are_present_but_invalid() {
         );
     }
 }
+
+#[actix_rt::test]
+async fn register_scammer_fails_if_there_is_a_fatal_database_error() {
+    let app = spawn_app().await;
+    let body = format!(
+        "address={}&notes={}&network_of_scammed_token={}&scammed_contract_address={}",
+        ADDRESS, NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
+    );
+
+    let app = spawn_app().await;
+    sqlx::query!("ALTER TABLE scam_token_creators DROP COLUMN address",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+    let response_post = app.post_scam_creators(body.into()).await;
+    assert_eq!(response_post.status().as_u16(), 500);
+}

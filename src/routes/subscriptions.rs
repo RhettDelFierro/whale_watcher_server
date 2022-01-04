@@ -1,3 +1,4 @@
+use super::error_chain_fmt;
 use crate::domain::{Email, NewSubscriber, SubscriberName};
 use crate::email_client::EmailClient;
 use crate::startup::ApplicationBaseUrl;
@@ -194,17 +195,4 @@ impl std::fmt::Display for StoreTokenError {
             "A database failure was encountered while trying to store a subscription token."
         )
     }
-}
-
-pub fn error_chain_fmt(
-    e: &impl std::error::Error,
-    f: &mut std::fmt::Formatter<'_>,
-) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
-    let mut current = e.source();
-    while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{}", cause)?;
-        current = cause.source();
-    }
-    Ok(())
 }
