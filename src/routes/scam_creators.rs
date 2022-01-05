@@ -82,7 +82,7 @@ impl std::fmt::Display for StoreScammerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A database failure was encountered while trying to store a subscription token."
+            "A database failure was encountered while trying to store a scammer."
         )
     }
 }
@@ -100,15 +100,17 @@ impl std::fmt::Display for StoreScammerError {
 pub async fn register_scammer(
     form: web::Form<FormDataScammers>,
     pool: web::Data<PgPool>,
-) -> HttpResponse {
+) -> Result<HttpResponse, BlockchainAppError> {
     let scam_creator: ScamCreator = form
         .0
         .try_into()
         .map_err(BlockchainAppError::ValidationError)?;
+
     let mut transaction = pool
         .begin()
         .await
         .context("Failed to acquire a Postgres connection from the pool")?;
+
     insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
         .await
         .context("Failed to insert network in the database.")?;
@@ -138,15 +140,17 @@ pub async fn register_scammer(
     insert_scammer(&mut transaction, &scam_creator)
         .await
         .context(format!(
-            "Failed to insert scammer {} with contract address {} in the database.",
+            "Failed to insert scammer {} and contract address {} in the database.",
             &scam_creator.address.as_ref(),
             &scam_creator.scammed_contract_address.as_ref()
         ))?;
+
     transaction
         .commit()
         .await
         .context("Failed to commit SQL transaction to store a scammer.")?;
-    HttpResponse::Ok().finish()
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[derive(serde::Deserialize)]

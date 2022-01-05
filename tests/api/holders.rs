@@ -50,3 +50,16 @@ async fn holders_returns_a_400_when_data_is_missing() {
         );
     }
 }
+
+#[actix_rt::test]
+async fn add_holder_fails_if_there_is_a_fatal_database_error() {
+    let app = spawn_app().await;
+    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
+
+    sqlx::query!("ALTER TABLE holder_totals DROP COLUMN holder_address",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+    let response_post = app.post_holders(body.into()).await;
+    assert_eq!(response_post.status().as_u16(), 500);
+}

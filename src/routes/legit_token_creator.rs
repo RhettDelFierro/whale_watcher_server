@@ -1,4 +1,4 @@
-use super::{insert_address, insert_network, BlockchainAppError};
+use super::{error_chain_fmt, insert_address, insert_network, BlockchainAppError};
 use crate::domain::{Address, LegitTokenCreator, Network, Notes, ScamType, TokenCreatorQuery};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
@@ -43,7 +43,7 @@ impl TryFrom<FormDataLegitTokenCreator> for LegitTokenCreator {
 pub async fn insert_legit_token_creator(
     transaction: &mut Transaction<'_, Postgres>,
     legit_token_creator: &LegitTokenCreator,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), StoreLegitTokenCreatorError> {
     sqlx::query!(
         r#"
         INSERT INTO legit_token_creators (address, notes, network_of_legit_token, legit_contract_address)
@@ -61,10 +61,7 @@ pub async fn insert_legit_token_creator(
     )
         .execute(transaction)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+        .map_err(|e| { StoreLegitTokenCreatorError(e) })?;
     Ok(())
 }
 
@@ -81,61 +78,80 @@ legit_contract_address = %form.legit_contract_address
 pub async fn register_legit_token_creator(
     form: web::Form<FormDataLegitTokenCreator>,
     pool: web::Data<PgPool>,
-) -> HttpResponse {
+) -> Result<HttpResponse, BlockchainAppError> {
     let legit_token_creator: LegitTokenCreator = form
         .0
         .try_into()
         .map_err(BlockchainAppError::ValidationError)?;
+
     let mut transaction = pool
         .begin()
         .await
         .context("Failed to acquire a Postgres connection from the pool")?;
 
-    insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
-        .await
-        .context("Failed to insert network in the database.")?;
+    insert_network(
+        &mut transaction,
+        &legit_token_creator.network_of_legit_token,
+    )
+    .await
+    .context("Failed to insert network in the database.")?;
 
-    if insert_address(
+    insert_address(
         &mut transaction,
         &legit_token_creator.network_of_legit_token,
         &legit_token_creator.address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_address(
+    .context(format!(
+        "Failed to insert token creator address {} in the database.",
+        &legit_token_creator.address.as_ref()
+    ))?;
+
+    insert_address(
         &mut transaction,
         &legit_token_creator.network_of_legit_token,
         &legit_token_creator.legit_contract_address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_legit_token_creator(&mut transaction, &legit_token_creator)
+    .context(format!(
+        "Failed to insert legit contract address {} in the database.",
+        &legit_token_creator.legit_contract_address.as_ref()
+    ))?;
+    insert_legit_token_creator(&mut transaction, &legit_token_creator)
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if transaction.commit().await.is_err() {
-        return HttpResponse::InternalServerError().finish();
-    }
-    HttpResponse::Ok().finish()
+        .context(format!(
+            "Failed to insert legit token creator {} and contract address {} in the database.",
+            &legit_token_creator.address.as_ref(),
+            &legit_token_creator.legit_contract_address.as_ref()
+        ))?;
+
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store a scammer.")?;
+
+    Ok(HttpResponse::Ok().finish())
 }
 
-#[derive(Debug)]
 pub struct StoreLegitTokenCreatorError(sqlx::Error);
-impl ResponseError for StoreLegitTokenCreatorError {}
+
+impl std::error::Error for StoreLegitTokenCreatorError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+impl std::fmt::Debug for StoreLegitTokenCreatorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
 impl std::fmt::Display for StoreLegitTokenCreatorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A database error was encountered while \
-            trying to store a this legit token creator."
+            "A database failure was encountered while trying to store a legit token creator."
         )
     }
 }

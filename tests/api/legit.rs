@@ -131,3 +131,19 @@ async fn register_legit_token_creator_returns_a_400_when_fields_are_present_but_
         );
     }
 }
+
+#[actix_rt::test]
+async fn register_legit_token_creator_fails_if_there_is_a_fatal_database_error() {
+    let app = spawn_app().await;
+    let body = format!(
+        "address={}&notes={}&network_of_legit_token={}&legit_contract_address={}",
+        ADDRESS, NOTES, NETWORK_OF_LEGIT_TOKEN, LEGIT_TOKEN_CONTRACT_ADDRESS
+    );
+
+    sqlx::query!("ALTER TABLE legit_token_creators DROP COLUMN address",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+    let response_post = app.post_legit_token_creators(body.into()).await;
+    assert_eq!(response_post.status().as_u16(), 500);
+}

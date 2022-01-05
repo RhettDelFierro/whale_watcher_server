@@ -141,7 +141,6 @@ async fn register_scammer_fails_if_there_is_a_fatal_database_error() {
         ADDRESS, NOTES, NETWORK_OF_SCAMMED_TOKEN, SCAMMED_TOKEN_ADDRESS
     );
 
-    let app = spawn_app().await;
     sqlx::query!("ALTER TABLE scam_token_creators DROP COLUMN address",)
         .execute(&app.db_pool)
         .await

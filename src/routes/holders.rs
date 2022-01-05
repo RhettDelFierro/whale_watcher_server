@@ -1,4 +1,6 @@
-use super::{insert_address, insert_network, insert_token_name, BlockchainAppError};
+use super::{
+    error_chain_fmt, insert_address, insert_network, insert_token_name, BlockchainAppError,
+};
 use crate::domain::{Address, HolderTotal, Network, TokenName};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
@@ -48,7 +50,7 @@ impl TryFrom<FormData> for HolderTotal {
 pub async fn insert_holder_totals(
     transaction: &mut Transaction<'_, Postgres>,
     holder_total: &HolderTotal,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), StoreHolderTotalError> {
     sqlx::query!(
         r#"
         INSERT INTO holder_totals (network_id, holder_address, token_name_id, place, amount, checked_on, contract_address)
@@ -72,10 +74,7 @@ pub async fn insert_holder_totals(
     )
         .execute(transaction)
         .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+        .map_err(|e| { StoreHolderTotalError(e) })?;
     Ok(())
 }
 
@@ -92,19 +91,24 @@ pub async fn insert_holder_totals(
         amount = % form.amount,
     )
 )]
-pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn add_holder(
+    form: web::Form<FormData>,
+    pool: web::Data<PgPool>,
+) -> Result<HttpResponse, BlockchainAppError> {
     let holder_total: HolderTotal = form
         .0
         .try_into()
         .map_err(BlockchainAppError::ValidationError)?;
+
     let mut transaction = pool
         .begin()
         .await
         .context("Failed to acquire a Postgres connection from the pool")?;
 
-    insert_network(&mut transaction, &scam_creator.network_of_scammed_token)
+    insert_network(&mut transaction, &holder_total.network)
         .await
         .context("Failed to insert network in the database.")?;
+
     insert_token_name(&mut transaction, &holder_total.token_name)
         .await
         .context(format!(
@@ -112,46 +116,62 @@ pub async fn add_holder(form: web::Form<FormData>, pool: web::Data<PgPool>) -> H
             &holder_total.token_name.as_ref()
         ))?;
 
-    if insert_address(
+    insert_address(
         &mut transaction,
         &holder_total.network,
         &holder_total.contract_address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_address(
+    .context(format!(
+        "Failed to insert contract address {} in the database.",
+        &holder_total.contract_address.as_ref()
+    ))?;
+
+    insert_address(
         &mut transaction,
         &holder_total.network,
         &holder_total.holder_address,
     )
     .await
-    .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if insert_holder_totals(&mut transaction, &holder_total)
+    .context(format!(
+        "Failed to insert holder {} in the database.",
+        &holder_total.holder_address.as_ref()
+    ))?;
+
+    insert_holder_totals(&mut transaction, &holder_total)
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    if transaction.commit().await.is_err() {
-        return HttpResponse::InternalServerError().finish();
-    }
-    HttpResponse::Ok().finish()
+        .context(format!(
+            "Failed to insert holder {} and contract address {} in the database.",
+            &holder_total.holder_address.as_ref(),
+            &holder_total.contract_address.as_ref()
+        ))?;
+
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store holder total.")?;
+
+    Ok(HttpResponse::Ok().finish())
 }
-#[derive(Debug)]
 pub struct StoreHolderTotalError(sqlx::Error);
-impl ResponseError for StoreHolderTotalError {}
+
+impl std::error::Error for StoreHolderTotalError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+impl std::fmt::Debug for StoreHolderTotalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
 impl std::fmt::Display for StoreHolderTotalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A database error was encountered while \
-            trying to store a this holder."
+            "A database failure was encountered while trying to store a scammer."
         )
     }
 }
