@@ -1,4 +1,4 @@
-use super::{insert_address, insert_network, BlockchainAppError};
+use super::{error_chain_fmt, insert_address, insert_network, BlockchainAppError};
 use crate::domain::{Address, Network, Notes, ScamCreator, ScamType, TokenCreatorQuery};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
@@ -40,7 +40,7 @@ impl TryFrom<FormDataScammers> for ScamCreator {
 pub async fn insert_scammer(
     transaction: &mut Transaction<'_, Postgres>,
     scammer: &ScamCreator,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), StoreScammerError> {
     sqlx::query!(
         r#"
         INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)
@@ -59,10 +59,32 @@ pub async fn insert_scammer(
         .execute(transaction)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
+            StoreScammerError(e)
         })?;
     Ok(())
+}
+
+pub struct StoreScammerError(sqlx::Error);
+
+impl std::error::Error for StoreScammerError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+impl std::fmt::Debug for StoreScammerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl std::fmt::Display for StoreScammerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "A database failure was encountered while trying to store a subscription token."
+        )
+    }
 }
 
 #[allow(clippy::async_yields_async)]
@@ -125,19 +147,6 @@ pub async fn register_scammer(
         .await
         .context("Failed to commit SQL transaction to store a scammer.")?;
     HttpResponse::Ok().finish()
-}
-
-#[derive(Debug)]
-pub struct StoreScamCreatorError(sqlx::Error);
-impl ResponseError for StoreScamCreatorError {}
-impl std::fmt::Display for StoreScamCreatorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "A database error was encountered while \
-            trying to store a this scam creator."
-        )
-    }
 }
 
 #[derive(serde::Deserialize)]

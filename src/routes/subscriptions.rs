@@ -170,7 +170,7 @@ pub async fn store_token(
     )
     .execute(transaction)
     .await
-    .map_err(StoreTokenError)?;
+    .map_err(|e| StoreTokenError(e))?;
     Ok(())
 }
 
