@@ -1,7 +1,7 @@
 use super::{
     error_chain_fmt, insert_address, insert_network, insert_token_name, BlockchainAppError,
 };
-use crate::domain::{Address, HolderTotal, Network, TokenName};
+use crate::domain::{Address, HolderInfo, HolderTotals, Network, TokenName};
 use actix_web::ResponseError;
 use actix_web::{web, HttpResponse};
 use anyhow::Context;
@@ -13,7 +13,22 @@ use tracing_futures::Instrument;
 use uuid::Uuid;
 
 #[derive(serde::Deserialize, serde::Serialize)]
+pub struct HolderData {
+    holder_address: String,
+    place: i32,
+    amount: BigDecimal,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct FormData {
+    network: String,
+    token_name: String,
+    contract_address: String,
+    holders: Vec<HolderData>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct HolderRowData {
     network: String,
     token_name: String,
     contract_address: String,
@@ -22,34 +37,44 @@ pub struct FormData {
     amount: BigDecimal,
 }
 
-impl TryFrom<FormData> for HolderTotal {
+impl TryFrom<FormData> for HolderTotals {
     type Error = String;
 
     fn try_from(value: FormData) -> Result<Self, Self::Error> {
         let network = Network::parse(value.network)?;
         let token_name = TokenName::parse(value.token_name)?;
         let contract_address = Address::parse(value.contract_address)?;
-        let holder_address = Address::parse(value.holder_address)?;
-        let place = value.place;
-        let amount = value.amount;
+        let mut holders = vec![];
+        for holder in value.holders {
+            let holder_address = Address::parse(holder.holder_address)?;
+            let place = holder.place;
+            let amount = holder.amount;
+            holders.push(HolderInfo {
+                holder_address,
+                place,
+                amount,
+            })
+        }
+
         Ok(Self {
             network,
             token_name,
             contract_address,
-            holder_address,
-            place,
-            amount,
+            holders,
         })
     }
 }
 
 #[tracing::instrument(
     name = "Saving new holder totals details in the database",
-    skip(transaction, holder_total)
+    skip(transaction, network_name, token_name, contract_address, holder_info)
 )]
 pub async fn insert_holder_totals(
     transaction: &mut Transaction<'_, Postgres>,
-    holder_total: &HolderTotal,
+    network_name: &str,
+    token_name: &str,
+    contract_address: &str,
+    holder_info: &HolderInfo,
 ) -> Result<(), StoreHolderTotalError> {
     sqlx::query!(
         r#"
@@ -64,13 +89,13 @@ pub async fn insert_holder_totals(
             $7
         );
         "#,
-        holder_total.network.as_ref(),
-        holder_total.holder_address.as_ref(),
-        holder_total.token_name.as_ref(),
-        holder_total.place,
-        holder_total.amount,
+        network_name,
+        holder_info.holder_address.as_ref(),
+        token_name,
+        holder_info.place,
+        holder_info.amount,
         Utc::now(),
-        holder_total.contract_address.as_ref(),
+        contract_address,
     )
         .execute(transaction)
         .await
@@ -86,16 +111,13 @@ pub async fn insert_holder_totals(
         network = % form.network,
         token_name = % form.token_name,
         contract_address = % form.contract_address,
-        holder_address = % form.holder_address,
-        place = % form.place,
-        amount = % form.amount,
     )
 )]
-pub async fn add_holder(
+pub async fn add_holders(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, BlockchainAppError> {
-    let holder_total: HolderTotal = form
+    let holder_total: HolderTotals = form
         .0
         .try_into()
         .map_err(BlockchainAppError::ValidationError)?;
@@ -115,7 +137,6 @@ pub async fn add_holder(
             "Failed to insert token name {}",
             &holder_total.token_name.as_ref()
         ))?;
-
     insert_address(
         &mut transaction,
         &holder_total.network,
@@ -126,26 +147,32 @@ pub async fn add_holder(
         "Failed to insert contract address {} in the database.",
         &holder_total.contract_address.as_ref()
     ))?;
+    for holder in holder_total.holders {
+        insert_address(
+            &mut transaction,
+            &holder_total.network,
+            &holder.holder_address,
+        )
+        .await
+        .context(format!(
+            "Failed to insert holder {} in the database.",
+            &holder.holder_address.as_ref()
+        ))?;
 
-    insert_address(
-        &mut transaction,
-        &holder_total.network,
-        &holder_total.holder_address,
-    )
-    .await
-    .context(format!(
-        "Failed to insert holder {} in the database.",
-        &holder_total.holder_address.as_ref()
-    ))?;
-
-    insert_holder_totals(&mut transaction, &holder_total)
+        insert_holder_totals(
+            &mut transaction,
+            holder_total.network.as_ref(),
+            holder_total.token_name.as_ref(),
+            holder_total.contract_address.as_ref(),
+            &holder,
+        )
         .await
         .context(format!(
             "Failed to insert holder {} and contract address {} in the database.",
-            &holder_total.holder_address.as_ref(),
+            &holder.holder_address.as_ref(),
             &holder_total.contract_address.as_ref()
         ))?;
-
+    }
     transaction
         .commit()
         .await
@@ -184,7 +211,7 @@ pub struct Parameters {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HoldersResponse {
-    pub data: Vec<FormData>,
+    pub data: Vec<HolderRowData>,
 }
 
 #[allow(clippy::async_yields_async)]
@@ -222,7 +249,8 @@ pub async fn get_holder(
                 data: vec![]
             };
             for row in rows {
-                let holder = FormData {
+
+                let holder = HolderRowData {
                     network: row.network_name,
                     token_name: row.token_name,
                     contract_address: row.contract_address,

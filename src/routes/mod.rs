@@ -14,7 +14,7 @@ pub use scam_tokens::*;
 pub use subscriptions::*;
 pub use subscriptions_confirm::*;
 
-use crate::domain::{Address, HolderTotal, Network, TokenName};
+use crate::domain::{Address, Network, TokenName};
 use actix_web::http::StatusCode;
 use actix_web::{web, HttpResponse, ResponseError};
 use sqlx::{PgPool, Postgres, Transaction};
