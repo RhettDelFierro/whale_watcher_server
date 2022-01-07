@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use serde_json::Value;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -43,11 +44,11 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
-    pub async fn post_holders(&self, body: String) -> reqwest::Response {
+    pub async fn post_holders(&self, body: &Value) -> reqwest::Response {
         reqwest::Client::new()
             .post(&format!("{}/holders", &self.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
+            .header("Content-Type", "application/json")
+            .json(body)
             .send()
             .await
             .expect("Failed to execute request.")

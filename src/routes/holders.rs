@@ -114,7 +114,7 @@ pub async fn insert_holder_totals(
     )
 )]
 pub async fn add_holders(
-    form: web::Form<FormData>,
+    form: web::Json<FormData>, //web::Form<FormData>,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, BlockchainAppError> {
     let holder_total: HolderTotals = form

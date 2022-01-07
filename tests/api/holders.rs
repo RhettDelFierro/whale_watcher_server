@@ -1,11 +1,17 @@
 use crate::helpers::spawn_app;
+use serde_json::{from_str, Value};
 
 #[actix_rt::test]
 async fn holders_returns_a_200_for_validform_data() {
     let app = spawn_app().await;
-    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
-
-    let response = app.post_holders(body.into()).await;
+    let body = r#"{
+        "network": "bsc",
+        "token_name": "some coin",
+        "contract_address": "some contract address",
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+    }"#;
+    let v: Value = serde_json::from_str(body).unwrap();
+    let response = app.post_holders(&v).await;
 
     assert_eq!(200, response.status().as_u16());
 
@@ -14,33 +20,42 @@ async fn holders_returns_a_200_for_validform_data() {
         .await
         .expect("Failed to fetch saved subscription.");
 
-    assert_eq!(
-        saved.holder_address,
-        "0x53084957562b692ea99beec870c12e7b8fb2d28e"
-    );
+    assert_eq!(saved.holder_address, "someholderaddress");
 }
 
 #[actix_rt::test]
 async fn holders_returns_a_400_when_data_is_missing() {
     let app = spawn_app().await;
+    let no_contract_address = r#"{
+        "network": "bsc",
+        "token_name": "some coin",
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+    }"#;
+    let no_token_name = r#"{
+        "network": "bsc",
+        "contract_address": "some contract address",
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+    }"#;
+    let no_network = r#"{
+        "token_name": "some coin",
+        "contract_address": "some contract address",
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+    }"#;
+    let no_holders = r#"{
+        "network": "bsc",
+        "token_name": "some coin",
+        "contract_address": "some contract address"
+    }"#;
     let test_cases = vec![
-        ("token_name=kitty", "token_name"),
-        (
-            "contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2",
-            "missing contract_address",
-        ),
-        (
-            "holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e",
-            "missing holder address",
-        ),
-        ("place=2", "missing place"),
-        ("amount=27939322392%2E330572392", "missing amount"),
-        ("timestamp=2000", "missing amount"),
-        ("", "missing all required field"),
+        (no_contract_address, "no contract address"),
+        (no_token_name, "no token name"),
+        (no_network, "no network"),
+        (no_holders, "no holders"),
     ];
 
     for (invalid_body, error_message) in test_cases {
-        let response = app.post_holders(invalid_body.into()).await;
+        let v: Value = serde_json::from_str(invalid_body).unwrap();
+        let response = app.post_holders(&v).await;
 
         assert_eq!(
             400,
@@ -54,12 +69,17 @@ async fn holders_returns_a_400_when_data_is_missing() {
 #[actix_rt::test]
 async fn add_holder_fails_if_there_is_a_fatal_database_error() {
     let app = spawn_app().await;
-    let body = "network=ethereum&token_name=kitty&contract_address=0x044727e50ff30db57fad06ff4f5846eab5ea52a2&holder_address=0x53084957562b692ea99beec870c12e7b8fb2d28e&place=2&amount=27939322392%2E330572392";
-
+    let body = r#"{
+        "network": "bsc",
+        "token_name": "some coin",
+        "contract_address": "some contract address",
+        "holders": [{"holder_address": "some holder address", "place": 10, "amount": 10.10}]
+    }"#;
+    let v: Value = serde_json::from_str(body).unwrap();
     sqlx::query!("ALTER TABLE holder_totals DROP COLUMN holder_address",)
         .execute(&app.db_pool)
         .await
         .unwrap();
-    let response_post = app.post_holders(body.into()).await;
+    let response_post = app.post_holders(&v).await;
     assert_eq!(response_post.status().as_u16(), 500);
 }
