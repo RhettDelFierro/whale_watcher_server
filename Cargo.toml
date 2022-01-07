@@ -15,7 +15,7 @@ actix-web = "4.0.0-beta.13"
 config = "0.11.0"
 serde = { version = "1", features = ["derive"]}
 uuid = { version = "0.8.1", features = ["v4"] }
-chrono = "0.4.15"
+chrono = { version = "0.4.15", features = ["serde", "rustc-serialize"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-futures = "0.2.5"
 tracing-subscriber = { version = "0.2.12", features = ["registry", "env-filter"] }

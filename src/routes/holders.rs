@@ -35,6 +35,7 @@ pub struct HolderRowData {
     holder_address: String,
     place: i32,
     amount: BigDecimal,
+    checked_on: DateTime<Utc>,
 }
 
 impl TryFrom<FormData> for HolderTotals {
@@ -257,6 +258,7 @@ pub async fn get_holder(
                     holder_address: row.holder_address,
                     place: row.place,
                     amount: row.amount,
+                    checked_on: row.checked_on
                 };
                 holders.data.push(holder);
             };
