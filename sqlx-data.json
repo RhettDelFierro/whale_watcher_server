@@ -227,6 +227,24 @@
       ]
     }
   },
+  "7b57e2776a245ba1602f638121550485e2219a6ccaaa62b5ec3e4683e33a3b5f": {
+    "query": "\n        SELECT email\n        FROM subscriptions\n        WHERE status = 'confirmed'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "email",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "a73e6f88ce60244358d0e6e71b1c6dfaf7a76310086535b2ed3029b9d7409774": {
     "query": "\n        SELECT l.address, l.notes, n.network_name, l.legit_contract_address FROM legit_token_creators l\n        INNER JOIN networks n\n            ON l.network_of_legit_token = n.network_id\n        WHERE l.address = $1\n        ;\n        ",
     "describe": {
