@@ -12,6 +12,12 @@ impl Email {
         }
     }
 }
+impl std::fmt::Display for Email {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+// We just forward to the Display implementation of // the wrapped String.
 
 impl AsRef<str> for Email {
     fn as_ref(&self) -> &str {
