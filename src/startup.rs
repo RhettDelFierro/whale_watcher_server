@@ -2,9 +2,9 @@ use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::{
-    add_holders, confirm, get_holder, get_legit_token_creators, get_scammers, health_check,
-    publish_newsletter, register_legit_token_creator, register_scam_token, register_scammer,
-    subscribe,
+    add_holder_descriptions, add_holders, confirm, get_holder, get_legit_token_creators,
+    get_scammers, health_check, publish_newsletter, register_legit_token_creator,
+    register_scam_token, register_scammer, subscribe,
 };
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
@@ -79,6 +79,10 @@ pub fn run(
             .route("/health_check", web::get().to(health_check))
             .route("/holders", web::post().to(add_holders))
             .route("/holders/list", web::get().to(get_holder))
+            .route(
+                "/holder_descriptions",
+                web::post().to(add_holder_descriptions),
+            )
             .route(
                 "/legit/creators",
                 web::post().to(register_legit_token_creator),

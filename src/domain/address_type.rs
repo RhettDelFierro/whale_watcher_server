@@ -73,16 +73,20 @@ impl AddressType {
 impl AsRef<str> for AddressType {
     fn as_ref(&self) -> &str {
         match self {
-            AddressType::ETH => "eth",
-            AddressType::BSC => "bsc",
-            AddressType::ADA => "ada",
-            AddressType::AVAX => "avax",
-            AddressType::MATIC => "matic",
-            AddressType::FTM => "ftm",
-            AddressType::SOL => "sol",
-            AddressType::LUNA => "luna",
-            AddressType::DOT => "dot",
-            AddressType::MOVR => "movr",
+            AddressType::Exchange => "exchange",
+            AddressType::LiquidityLocker => "liquidity_locker",
+            AddressType::TokenCreator => "token_creator",
+            AddressType::Whale => "whale",
+            AddressType::Legit => "legit",
+            AddressType::LongTermHolder => "longterm_holder",
+            AddressType::MediumTermHolder => "mediumterm_holder",
+            AddressType::ShortTermHolder => "shortterm_holder",
+            AddressType::SuspiciousHolder => "suspicious_holder",
+            AddressType::Scammer => "scammer",
+            AddressType::Paperhand => "paperhand",
+            AddressType::Dumper => "dumper",
+            AddressType::PanicSeller => "panic_seller",
+            AddressType::DeadAddress => "dead_address",
         }
     }
 }
