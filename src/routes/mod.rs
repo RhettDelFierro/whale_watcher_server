@@ -1,4 +1,5 @@
 mod health_check;
+mod holder_description;
 mod holders;
 mod legit_token_creator;
 mod newsletters;
@@ -8,6 +9,7 @@ mod subscriptions;
 mod subscriptions_confirm;
 
 pub use health_check::*;
+pub use holder_description::*;
 pub use holders::*;
 pub use legit_token_creator::*;
 pub use newsletters::*;

@@ -63,9 +63,9 @@ impl AddressType {
         let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
         let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            Err(format!("{} is not a valid network name.", s))
+            Err(format!("{} is not a valid address type.", s))
         } else {
-            derive_network(&s)
+            derive_address_type(&s)
         }
     }
 }

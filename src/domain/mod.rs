@@ -1,6 +1,7 @@
 mod address;
 mod address_type;
 mod email;
+mod holder_description;
 mod holder_totals;
 mod legit_token_creator;
 mod network;
@@ -15,6 +16,7 @@ mod token_name;
 pub use address::Address;
 pub use address_type::AddressType;
 pub use email::Email;
+pub use holder_description::HolderDescription;
 pub use holder_totals::{HolderInfo, HolderTotals};
 pub use legit_token_creator::LegitTokenCreator;
 pub use network::Network;
