@@ -7,7 +7,7 @@ pub struct HolderDescriptions {
 
 pub struct HolderDescription {
     pub holder_address: Address,
-    pub address_type: AddressType,
+    pub address_types: Vec<AddressType>,
     pub contract_address: Address,
     pub notes: Notes,
 }

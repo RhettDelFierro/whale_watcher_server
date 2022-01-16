@@ -16,7 +16,7 @@ use uuid::Uuid;
 pub struct HolderData {
     holder_address: String,
     contract_address: String,
-    address_type: String,
+    address_types: Vec<String>,
     notes: Option<String>,
 }
 
@@ -33,14 +33,19 @@ impl TryFrom<FormData> for HolderDescriptions {
         let mut holder_descriptions = vec![];
         let network = Network::parse(value.network)?;
         for holder in value.holder_descriptions {
+            let mut address_types = vec![];
             let holder_address = Address::parse(holder.holder_address)?;
             let contract_address = Address::parse(holder.contract_address)?;
-            let address_type = AddressType::parse(holder.address_type)?;
+            for address_type in holder.address_types {
+                let at = AddressType::parse(address_type)?;
+                address_types.push(at)
+            }
             let notes = Notes::parse(holder.notes)?;
+
             holder_descriptions.push(HolderDescription {
                 holder_address,
                 contract_address,
-                address_type,
+                address_types,
                 notes,
             })
         }
@@ -90,16 +95,19 @@ pub async fn add_holder_descriptions(
             "Failed to insert contract address {} in the database.",
             &holder.contract_address.as_ref()
         ))?;
-        insert_holder_description(
-            &mut transaction,
-            &holder_descriptions.network.as_ref(),
-            &holder,
-        )
-        .await
-        .context(format!(
-            "Failed to insert contract address {} in the database.",
-            &holder.contract_address.as_ref()
-        ))?;
+        for address_type in &holder.address_types {
+            insert_holder_description(
+                &mut transaction,
+                &holder_descriptions.network.as_ref(),
+                &holder,
+                address_type,
+            )
+            .await
+            .context(format!(
+                "Failed to insert contract address {} in the database.",
+                &holder.contract_address.as_ref()
+            ))?;
+        }
     }
 
     transaction
@@ -117,6 +125,7 @@ pub async fn insert_holder_description(
     transaction: &mut Transaction<'_, Postgres>,
     network_name: &str,
     holder_description: &HolderDescription,
+    address_type: &AddressType,
 ) -> Result<(), StoreHolderDescriptionError> {
     sqlx::query!(
         r#"
@@ -133,7 +142,7 @@ pub async fn insert_holder_description(
         holder_description.holder_address.as_ref(),
         holder_description.contract_address.as_ref(),
         holder_description.notes.as_ref(),
-        holder_description.address_type.as_ref(),
+        address_type.as_ref(),
     )
         .execute(transaction)
         .await
@@ -189,13 +198,16 @@ pub async fn get_holder_descriptions(
 ) -> HttpResponse {
     let mut holders: HolderDescriptionsResponse = HolderDescriptionsResponse { data: vec![] };
     for holder_address in &form.holder_addresses {
-        let holder_description =
+        let holder_descriptions =
             match get_holder_description_from_holder_address(&pool, holder_address.to_string())
                 .await
             {
-                Ok(holder_description) => holder_description,
+                Ok(holder_descriptions) => holder_descriptions,
                 Err(_) => return HttpResponse::InternalServerError().finish(),
             };
+        for holder_description in holder_descriptions {
+            // combine each holder description with their tags:
+        }
         holders.data.push(holder_description.unwrap())
     }
     HttpResponse::Ok().json(holders)
@@ -206,7 +218,7 @@ pub async fn get_holder_description_from_holder_address(
     pool: &PgPool,
     holder_address: String,
 ) -> Result<Option<HolderRowData>, sqlx::Error> {
-    let result = sqlx::query!(
+    let results = sqlx::query!(
         r#"
         SELECT h.*, n.network_name FROM holder_descriptions h
         INNER JOIN addresses a
@@ -217,17 +229,16 @@ pub async fn get_holder_description_from_holder_address(
         "#,
         holder_address,
     )
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
-    Ok(result.map(|r| HolderRowData {
-        network: r.network_name,
-        contract_address: r.contract_address,
-        holder_address: r.holder_address,
-        notes: r.notes,
-        address_type: r.address_type,
-    }))
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|r| HolderRowData {
+                network: r.network_name,
+                contract_address: r.contract_address,
+                holder_address: r.holder_address,
+                notes: r.notes,
+                address_type: r.address_type,
+            })
+        .collect();
+    Ok(results)
 }
