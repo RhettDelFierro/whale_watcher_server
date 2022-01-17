@@ -22,7 +22,7 @@ pub struct HolderData {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct FormData {
-    network: String,
+    network_name: String,
     holder_descriptions: Vec<HolderData>,
 }
 
@@ -31,7 +31,7 @@ impl TryFrom<FormData> for HolderDescriptions {
 
     fn try_from(value: FormData) -> Result<Self, Self::Error> {
         let mut holder_descriptions = vec![];
-        let network = Network::parse(value.network)?;
+        let network = Network::parse(value.network_name)?;
         for holder in value.holder_descriptions {
             let mut address_types = vec![];
             let holder_address = Address::parse(holder.holder_address)?;

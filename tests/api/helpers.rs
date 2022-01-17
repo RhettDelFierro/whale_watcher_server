@@ -57,7 +57,7 @@ impl TestApp {
         reqwest::Client::new()
             .post(&format!("{}/holder_descriptions", &self.address))
             .header("Content-Type", "application/application/json")
-            .body(body)
+            .json(body)
             .send()
             .await
             .expect("Failed to execute request.")
@@ -65,8 +65,9 @@ impl TestApp {
     pub async fn get_holder_descriptions(&self, body: &Value) -> reqwest::Response {
         reqwest::Client::new()
             .post(&format!("{}/holder_descriptions/list", &self.address))
+            .header("Content-Type", "application/application/json")
+            .json(body)
             .send()
-            .body(body)
             .await
             .expect("Failed to execute request.")
     }

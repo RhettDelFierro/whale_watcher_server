@@ -98,10 +98,16 @@ mod tests {
 
     #[test]
     fn a_valid_address_type_is_parsed_successfully() {
-        let address_type = "ethereum".to_string();
-        assert_eq!(AddressType::parse(address_type).unwrap().as_ref(), "eth");
-        let address_type = "binance".to_string();
-        assert_eq!(AddressType::parse(address_type).unwrap().as_ref(), "bsc");
+        let address_type = "longterm_holder".to_string();
+        assert_eq!(
+            AddressType::parse(address_type).unwrap().as_ref(),
+            "longterm_holder"
+        );
+        let address_type = "long_term_holder".to_string();
+        assert_eq!(
+            AddressType::parse(address_type).unwrap().as_ref(),
+            "longterm_holder"
+        );
     }
 
     #[test]

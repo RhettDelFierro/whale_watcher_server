@@ -3,11 +3,11 @@ use serde_json::{from_str, Value};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HolderRowData {
-    network: String,
+    network_name: String,
     contract_address: String,
     holder_address: String,
-    notes: Option<String>,
-    address_type: String,
+    notes: String,
+    address_types: Vec<String>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -18,11 +18,11 @@ pub struct HolderDescriptionsResponse {
 async fn add_holder_descriptions_returns_a_200_for_validform_data() {
     let app = spawn_app().await;
     let body = r#"{
-        "network": "bsc",
+        "network_name": "bsc",
         "holder_descriptions": [
-            {"holder_address": "someholderaddress1", "contract_address": 'somecontractaddress1, "notes": "holder1 notes", "address_type": ["whale", "longterm_holder"]},
-            {"holder_address": "someholderaddress2", "contract_address": 'somecontractaddress1, "notes": "holder2 notes", "address_type": ["longterm_holder", "token_creator"]},
-            {"holder_address": "someholderaddress3", "contract_address": 'somecontractaddress1, "notes": "holder3 notes", "address_type": ["scammer", "paperhand", "dumper"]},
+            {"holder_address": "someholderaddress1", "contract_address": "somecontractaddress1", "notes": "holder1 notes", "address_types": ["whale", "longterm_holder"]},
+            {"holder_address": "someholderaddress2", "contract_address": "somecontractaddress1", "notes": "holder2 notes", "address_types": ["longterm_holder", "token_creator"]},
+            {"holder_address": "someholderaddress3", "contract_address": "somecontractaddress1", "notes": "holder3 notes", "address_types": ["scammer", "paperhand", "dumper"]}
         ]
     }"#;
     let v: Value = serde_json::from_str(body).unwrap();
@@ -41,67 +41,75 @@ async fn add_holder_descriptions_returns_a_200_for_validform_data() {
     let parsed = response_parsed.unwrap();
     assert_eq!(parsed.data[0].contract_address, "somecontractaddress1");
     assert_eq!(parsed.data[0].notes, "holder1 notes");
-    assert_eq!(parsed.data[0].network, "bsc");
+    assert_eq!(parsed.data[0].network_name, "bsc");
     assert_eq!(parsed.data[0].holder_address, "someholderaddress1");
+    assert_eq!(parsed.data[0].address_types[0], "whale");
 }
-//
-// #[actix_rt::test]
-// async fn add_holder_descriptions_returns_a_400_when_data_is_missing() {
-//     let app = spawn_app().await;
-//     let no_contract_address = r#"{
-//         "network": "bsc",
-//         "token_name": "some coin",
-//         "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
-//     }"#;
-//     let no_token_name = r#"{
-//         "network": "bsc",
-//         "contract_address": "some contract address",
-//         "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
-//     }"#;
-//     let no_network = r#"{
-//         "token_name": "some coin",
-//         "contract_address": "some contract address",
-//         "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
-//     }"#;
-//     let no_holders = r#"{
-//         "network": "bsc",
-//         "token_name": "some coin",
-//         "contract_address": "some contract address"
-//     }"#;
-//     let test_cases = vec![
-//         (no_contract_address, "no contract address"),
-//         (no_token_name, "no token name"),
-//         (no_network, "no network"),
-//         (no_holders, "no holders"),
-//     ];
-//
-//     for (invalid_body, error_message) in test_cases {
-//         let v: Value = serde_json::from_str(invalid_body).unwrap();
-//         let response = app.post_holders(&v).await;
-//
-//         assert_eq!(
-//             400,
-//             response.status().as_u16(),
-//             "The API did not fail with 400 Bad Request when the payload was {}.",
-//             error_message
-//         );
-//     }
-// }
-//
-// #[actix_rt::test]
-// async fn insert_holder_description_fails_if_there_is_a_fatal_database_error() {
-//     let app = spawn_app().await;
-//     let body = r#"{
-//         "network": "bsc",
-//         "token_name": "some coin",
-//         "contract_address": "some contract address",
-//         "holders": [{"holder_address": "some holder address", "place": 10, "amount": 10.10}]
-//     }"#;
-//     let v: Value = serde_json::from_str(body).unwrap();
-//     sqlx::query!("ALTER TABLE holder_totals DROP COLUMN holder_address",)
-//         .execute(&app.db_pool)
-//         .await
-//         .unwrap();
-//     let response_post = app.post_holders(&v).await;
-//     assert_eq!(response_post.status().as_u16(), 500);
-// }
+
+#[actix_rt::test]
+async fn add_holder_descriptions_returns_a_400_when_data_is_missing() {
+    let app = spawn_app().await;
+    let no_network_name = r#"{
+        "holder_descriptions": [
+            {"holder_address": "someholderaddress1", "contract_address": "somecontractaddress1", "notes": "holder1 notes", "address_types": ["whale", "longterm_holder"]},
+            {"holder_address": "someholderaddress2", "contract_address": "somecontractaddress1", "notes": "holder2 notes", "address_types": ["longterm_holder", "token_creator"]},
+            {"holder_address": "someholderaddress3", "contract_address": "somecontractaddress1", "notes": "holder3 notes", "address_types": ["scammer", "paperhand", "dumper"]}
+        ]
+    }"#;
+    let no_holder_address = r#"{
+        "network_name": "bsc",
+        "holder_descriptions": [
+            {"contract_address": "somecontractaddress1", "notes": "holder1 notes", "address_types": ["whale", "longterm_holder"]}
+        ]
+    }"#;
+    let no_contract_address = r#"{
+        "network_name": "bsc",
+        "holder_descriptions": [
+            {"holder_address": "someholderaddress3", "notes": "holder3 notes", "address_types": ["scammer", "paperhand", "dumper"]}
+        ]
+    }"#;
+    let no_address_types = r#"{
+        "network_name": "bsc",
+        "holder_descriptions": [
+            {"holder_address": "someholderaddress3", "contract_address": "somecontractaddress1", "notes": "holder3 notes"}
+        ]
+    }"#;
+    let test_cases = vec![
+        (no_network_name, "no network name"),
+        (no_contract_address, "no contract address"),
+        (no_holder_address, "no holder address"),
+        (no_address_types, "no address types"),
+    ];
+
+    for (invalid_body, error_message) in test_cases {
+        let v: Value = serde_json::from_str(invalid_body).unwrap();
+        let response = app.post_holder_descriptions(&v).await;
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        );
+    }
+}
+
+#[actix_rt::test]
+async fn insert_holder_description_fails_if_there_is_a_fatal_database_error() {
+    let app = spawn_app().await;
+    let body = r#"{
+        "network_name": "bsc",
+        "holder_descriptions": [
+            {"holder_address": "someholderaddress1", "contract_address": "somecontractaddress1", "notes": "holder1 notes", "address_types": ["whale", "longterm_holder"]},
+            {"holder_address": "someholderaddress2", "contract_address": "somecontractaddress1", "notes": "holder2 notes", "address_types": ["longterm_holder", "token_creator"]},
+            {"holder_address": "someholderaddress3", "contract_address": "somecontractaddress1", "notes": "holder3 notes", "address_types": ["scammer", "paperhand", "dumper"]}
+        ]
+    }"#;
+    let v: Value = serde_json::from_str(body).unwrap();
+    sqlx::query!("ALTER TABLE holder_descriptions DROP COLUMN contract_address",)
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+    let response_post = app.post_holder_descriptions(&v).await;
+    assert_eq!(response_post.status().as_u16(), 500);
+}
