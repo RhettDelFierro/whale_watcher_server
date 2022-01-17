@@ -1,5 +1,21 @@
 {
   "db": "PostgreSQL",
+  "0b369db77741b8a4016a913db9eb4aca24e6286430a85e1249a837fe2e2659f2": {
+    "query": "\n        INSERT INTO holder_descriptions (network_id, holder_address, contract_address, notes, address_types)\n        VALUES (\n            (SELECT network_id FROM networks WHERE network_name = $1),\n            $2,\n            $3,\n            $4,\n            $5\n        );\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "14f3ee32c207f8433196160e48f8f2c3406c5f158d0338e727157a23899ea862": {
     "query": "\n        INSERT INTO scam_token_creators (address, notes, network_of_scammed_token, scammed_contract_address)\n        VALUES (\n            $1,\n            $2,\n            (SELECT network_id FROM networks WHERE network_name = $3),\n            $4\n        );\n        ",
     "describe": {
@@ -241,6 +257,56 @@
         "Left": []
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "8516c3aef479083c16f029c7170f3cbd3a5e8472cdf056f7aa5587182f1b20d4": {
+    "query": "\n        SELECT h.*, n.network_name FROM holder_descriptions h\n        INNER JOIN addresses a\n            ON a.address = h.holder_address AND a.network_id = h.network_id AND h.holder_address = $1\n        INNER JOIN networks n\n            ON n.network_id = h.network_id\n        ;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "network_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "holder_address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "contract_address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "notes",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "address_types",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "network_name",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        true,
+        false,
+        false,
+        true,
+        true,
         false
       ]
     }
