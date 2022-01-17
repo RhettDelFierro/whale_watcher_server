@@ -95,19 +95,16 @@ pub async fn add_holder_descriptions(
             "Failed to insert contract address {} in the database.",
             &holder.contract_address.as_ref()
         ))?;
-        for address_type in &holder.address_types {
-            insert_holder_description(
-                &mut transaction,
-                &holder_descriptions.network.as_ref(),
-                &holder,
-                address_type,
-            )
-            .await
-            .context(format!(
-                "Failed to insert contract address {} in the database.",
-                &holder.contract_address.as_ref()
-            ))?;
-        }
+        insert_holder_description(
+            &mut transaction,
+            &holder_descriptions.network.as_ref(),
+            &holder,
+        )
+        .await
+        .context(format!(
+            "Failed to insert contract address {} in the database.",
+            &holder.contract_address.as_ref()
+        ))?;
     }
 
     transaction
@@ -125,11 +122,15 @@ pub async fn insert_holder_description(
     transaction: &mut Transaction<'_, Postgres>,
     network_name: &str,
     holder_description: &HolderDescription,
-    address_type: &AddressType,
 ) -> Result<(), StoreHolderDescriptionError> {
+    let address_types = holder_description
+        .address_types
+        .iter()
+        .map(|hd| hd.as_ref().to_string())
+        .collect::<Vec<String>>();
     sqlx::query!(
         r#"
-        INSERT INTO holder_descriptions (network_id, holder_address, contract_address, notes, address_type)
+        INSERT INTO holder_descriptions (network_id, holder_address, contract_address, notes, address_types)
         VALUES (
             (SELECT network_id FROM networks WHERE network_name = $1),
             $2,
@@ -142,7 +143,7 @@ pub async fn insert_holder_description(
         holder_description.holder_address.as_ref(),
         holder_description.contract_address.as_ref(),
         holder_description.notes.as_ref(),
-        address_type.as_ref(),
+        &address_types[..],
     )
         .execute(transaction)
         .await
@@ -180,11 +181,11 @@ pub struct Parameters {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct HolderRowData {
-    network: String,
+    network_name: String,
     contract_address: String,
     holder_address: String,
     notes: Option<String>,
-    address_type: String,
+    address_types: Option<Vec<String>>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -205,10 +206,9 @@ pub async fn get_holder_descriptions(
                 Ok(holder_descriptions) => holder_descriptions,
                 Err(_) => return HttpResponse::InternalServerError().finish(),
             };
-        for holder_description in holder_descriptions {
-            // combine each holder description with their tags:
+        for hd in holder_descriptions {
+            holders.data.push(hd)
         }
-        holders.data.push(holder_description.unwrap())
     }
     HttpResponse::Ok().json(holders)
 }
@@ -217,7 +217,7 @@ pub async fn get_holder_descriptions(
 pub async fn get_holder_description_from_holder_address(
     pool: &PgPool,
     holder_address: String,
-) -> Result<Option<HolderRowData>, sqlx::Error> {
+) -> Result<Vec<HolderRowData>, sqlx::Error> {
     let results = sqlx::query!(
         r#"
         SELECT h.*, n.network_name FROM holder_descriptions h
@@ -230,15 +230,16 @@ pub async fn get_holder_description_from_holder_address(
         holder_address,
     )
         .fetch_all(pool)
-        .await?
+        .await?;
+    let holder_descriptions = results
         .into_iter()
         .map(|r| HolderRowData {
-                network: r.network_name,
-                contract_address: r.contract_address,
-                holder_address: r.holder_address,
-                notes: r.notes,
-                address_type: r.address_type,
-            })
+            network_name: r.network_name,
+            contract_address: r.contract_address,
+            holder_address: r.holder_address,
+            notes: r.notes,
+            address_types: r.address_types,
+        })
         .collect();
-    Ok(results)
+    Ok(holder_descriptions)
 }
