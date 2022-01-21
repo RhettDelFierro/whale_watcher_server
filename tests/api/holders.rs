@@ -1,5 +1,7 @@
 use crate::helpers::spawn_app;
+use bigdecimal::ToPrimitive;
 use serde_json::{from_str, Value};
+use sqlx::types::BigDecimal;
 
 #[actix_rt::test]
 async fn holders_returns_a_200_for_validform_data() {
@@ -8,7 +10,7 @@ async fn holders_returns_a_200_for_validform_data() {
         "network": "bsc",
         "token_name": "some coin",
         "contract_address": "some contract address",
-        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": "10,000,000,000,000.100001"}]
     }"#;
     let v: Value = serde_json::from_str(body).unwrap();
     let response = app.post_holders(&v).await;
@@ -21,6 +23,13 @@ async fn holders_returns_a_200_for_validform_data() {
         .expect("Failed to fetch saved subscription.");
 
     assert_eq!(saved.holder_address, "someholderaddress");
+
+    let saved_amount = sqlx::query!("SELECT amount FROM holder_totals",)
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert_eq!(saved_amount.amount.to_f64().unwrap(), 10000000000000.100001);
 }
 
 #[actix_rt::test]
@@ -29,17 +38,17 @@ async fn holders_returns_a_400_when_data_is_missing() {
     let no_contract_address = r#"{
         "network": "bsc",
         "token_name": "some coin",
-        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": "10.10"}]
     }"#;
     let no_token_name = r#"{
         "network": "bsc",
         "contract_address": "some contract address",
-        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": "10.10"}]
     }"#;
     let no_network = r#"{
         "token_name": "some coin",
         "contract_address": "some contract address",
-        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": 10.10}]
+        "holders": [{"holder_address": "someholderaddress", "place": 10, "amount": "10.10"}]
     }"#;
     let no_holders = r#"{
         "network": "bsc",
@@ -73,7 +82,7 @@ async fn add_holder_fails_if_there_is_a_fatal_database_error() {
         "network": "bsc",
         "token_name": "some coin",
         "contract_address": "some contract address",
-        "holders": [{"holder_address": "some holder address", "place": 10, "amount": 10.10}]
+        "holders": [{"holder_address": "some holder address", "place": 10, "amount": "10.10"}]
     }"#;
     let v: Value = serde_json::from_str(body).unwrap();
     sqlx::query!("ALTER TABLE holder_totals DROP COLUMN holder_address",)

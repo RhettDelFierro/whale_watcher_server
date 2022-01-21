@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::convert::{TryFrom, TryInto};
+use std::str::FromStr;
 use tracing_futures::Instrument;
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ use uuid::Uuid;
 pub struct HolderData {
     holder_address: String,
     place: i32,
-    amount: BigDecimal,
+    amount: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -49,7 +50,7 @@ impl TryFrom<FormData> for HolderTotals {
         for holder in value.holders {
             let holder_address = Address::parse(holder.holder_address)?;
             let place = holder.place;
-            let amount = holder.amount;
+            let amount = BigDecimal::from_str(&holder.amount.replace(",", "")).unwrap(); //::from_str().unwrap();
             holders.push(HolderInfo {
                 holder_address,
                 place,
